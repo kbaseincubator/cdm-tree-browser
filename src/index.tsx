@@ -30,7 +30,7 @@ const plugin: JupyterFrontEndPlugin<void> = {
 function onActivate(app: any) {
   const panel = new Panel();
   panel.id = 'cdm-tree-browser';
-  panel.title.icon = new IconWidget(); // svg import
+  panel.title.icon = new IconWidget();
   panel.addWidget(new TreeBrowserWidget());
   app.shell.add(panel, 'left', { rank: 1 });
 }
