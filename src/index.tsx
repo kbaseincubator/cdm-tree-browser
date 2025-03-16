@@ -1,5 +1,3 @@
-import { faTree } from '@fortawesome/free-solid-svg-icons';
-import { FontAwesomeIcon } from '@fortawesome/react-fontawesome';
 import {
   JupyterFrontEnd,
   JupyterFrontEndPlugin
@@ -8,7 +6,8 @@ import { ReactWidget } from '@jupyterlab/apputils';
 import { Panel } from '@lumino/widgets';
 import React, { useMemo } from 'react';
 import { useQuery } from '@tanstack/react-query';
-import { RichTreeView } from '@mui/x-tree-view/RichTreeView';
+import faTreeSVG from '@fortawesome/fontawesome-free/svgs/solid/tree.svg';
+import { Tree } from 'react-arborist';
 
 /**
  * Initialization data for the cdm-tree-browser extension.
@@ -27,18 +26,16 @@ const plugin: JupyterFrontEndPlugin<void> = {
   }
 };
 
-function onActivate(app: any) {
+function onActivate(app: JupyterFrontEnd) {
   const panel = new Panel();
   panel.id = 'cdm-tree-browser';
-  panel.title.icon = new IconWidget();
+  panel.title.icon = {
+    render: element => {
+      element.innerHTML = faTreeSVG;
+    }
+  };
   panel.addWidget(new TreeBrowserWidget());
   app.shell.add(panel, 'left', { rank: 1 });
-}
-
-class IconWidget extends ReactWidget {
-  render(): JSX.Element {
-    return <FontAwesomeIcon icon={faTree} />;
-  }
 }
 
 class TreeBrowserWidget extends ReactWidget {
@@ -55,15 +52,35 @@ function TreeBrowser() {
       // run fetch and return data here
     }
   });
-  const treeItems = useMemo(() => {
+  const treeData = useMemo(() => {
     // perform any client-side transformations
-    return []; // from query.data
+    return [
+      { id: '1', name: 'Empty' },
+      { id: '2', name: 'Empty 2' },
+      {
+        id: '3',
+        name: 'Some Data Source',
+        children: [
+          { id: 'c1', name: 'Data 1' },
+          { id: 'c2', name: 'Data 2' },
+          { id: 'c3', name: 'Data 3' }
+        ]
+      },
+      {
+        id: '4',
+        name: 'Another Data Source',
+        children: [
+          { id: 'd1', name: 'Alice' },
+          { id: 'd2', name: 'Bob' },
+          { id: 'd3', name: 'Charlie' }
+        ]
+      }
+    ]; // from query.data
   }, [query.data]);
-  // For the tree we can use https://mui.com/x/api/tree-view/rich-tree-view/
-  // We can share the same MUI theme with kbase/ui once kbase/assets is ready
+  // For the tree we can use react-arborist
   return (
     <div className="jp-TreeBrowserWidget">
-      <RichTreeView items={treeItems} />
+      <Tree initialData={treeData} />
     </div>
   );
 }
