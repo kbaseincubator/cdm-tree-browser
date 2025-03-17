@@ -1,6 +1,6 @@
 {
     "name": "cdm-tree-browser",
-    "version": "0.1.0",
+    "version": "0.1.2",
     "description": "A JupyterLab extension for browsing file/data trees in KBase CDM JupyterLab.",
     "keywords": [
         "jupyter",
