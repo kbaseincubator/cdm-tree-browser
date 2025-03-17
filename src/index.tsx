@@ -2,12 +2,20 @@ import {
   JupyterFrontEnd,
   JupyterFrontEndPlugin
 } from '@jupyterlab/application';
-import { ReactWidget } from '@jupyterlab/apputils';
+import { ReactWidget, ISessionContext } from '@jupyterlab/apputils';
 import { Panel } from '@lumino/widgets';
 import React, { useMemo } from 'react';
-import { useQuery } from '@tanstack/react-query';
+import {
+  useQuery,
+  QueryClient,
+  QueryClientProvider
+} from '@tanstack/react-query';
 import faTreeSVG from '@fortawesome/fontawesome-free/svgs/solid/tree.svg';
 import { Tree } from 'react-arborist';
+import {
+  IMessage,
+  IOPubMessageType
+} from '@jupyterlab/services/lib/kernel/messages';
 
 /**
  * Initialization data for the cdm-tree-browser extension.
@@ -17,16 +25,16 @@ const plugin: JupyterFrontEndPlugin<void> = {
   description:
     'A JupyterLab extension for browsing file/data trees in KBase CDM JupyterLab.',
   autoStart: true,
-  activate: async (app: JupyterFrontEnd) => {
+  activate: async (app, sessionContext) => {
     console.log('JupyterLab extension cdm-tree-browser is activated!');
-    onActivate(app);
+    onActivate(app, sessionContext);
   },
   deactivate: () => {
     console.log('JupyterLab extension cdm-tree-browser was deactivated!');
   }
 };
 
-function onActivate(app: JupyterFrontEnd) {
+function onActivate(app: JupyterFrontEnd, sessionContext: ISessionContext) {
   const panel = new Panel();
   panel.id = 'cdm-tree-browser';
   panel.title.icon = {
@@ -34,24 +42,38 @@ function onActivate(app: JupyterFrontEnd) {
       element.innerHTML = faTreeSVG;
     }
   };
-  panel.addWidget(new TreeBrowserWidget());
+  panel.addWidget(new TreeBrowserWidget(sessionContext));
   app.shell.add(panel, 'left', { rank: 1 });
 }
 
 class TreeBrowserWidget extends ReactWidget {
+  private sessionContext: ISessionContext;
+
+  constructor(sessionContext: ISessionContext) {
+    super();
+    this.sessionContext = sessionContext;
+  }
+
   render(): JSX.Element {
-    return <TreeBrowser />;
+    // Extension React App setup (App.tsx equivalent)
+    const queryClient = new QueryClient();
+
+    return (
+      <QueryClientProvider client={queryClient}>
+        <TreeBrowser sessionContext={this.sessionContext} />
+      </QueryClientProvider>
+    );
   }
 }
 
-function TreeBrowser() {
+function TreeBrowser({ sessionContext }: { sessionContext: ISessionContext }) {
   // For API calls we can use react-query (instead of rtk-query as redux is overkill)
   const query = useQuery({
-    queryKey: ['tree'],
-    queryFn: async () => {
-      // run fetch and return data here
-    }
+    queryKey: ['namespaces'],
+    queryFn: async () =>
+      callKernel('display_namespace_viewer()', sessionContext)
   });
+  console.log('namespaces', query.status, query.data);
   const treeData = useMemo(() => {
     // perform any client-side transformations
     return [
@@ -84,5 +106,57 @@ function TreeBrowser() {
     </div>
   );
 }
+
+const callKernel = async (
+  code: string,
+  sessionContext: ISessionContext,
+  timeout = 1000
+) => {
+  if (!sessionContext.session?.kernel) {
+    throw new Error('No kernel available');
+  }
+
+  const future = sessionContext.session.kernel.requestExecute({
+    code: code,
+    store_history: false
+  });
+
+  return new Promise(async (resolve, reject) => {
+    const results: IMessage<IOPubMessageType>['content'][] = [];
+
+    future.onIOPub = (msg: IMessage<IOPubMessageType>) => {
+      const msgType = msg.header.msg_type;
+      switch (msgType) {
+        case 'execute_result':
+          results.push(msg.content);
+          break;
+        default:
+          break;
+      }
+      return;
+    };
+
+    future.onReply = msg => {
+      if (msg.content.status === 'ok') {
+        results.push(msg.content);
+      } else {
+        reject(
+          new Error('Execution failed with status: ' + msg.content.status)
+        );
+      }
+    };
+
+    // Tiemout
+    if (timeout) {
+      setTimeout(() => {
+        future.dispose();
+        reject(new Error('callKernel timeout'));
+      }, timeout);
+    }
+
+    await future.done;
+    resolve(results);
+  });
+};
 
 export default plugin;
