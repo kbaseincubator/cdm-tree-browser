@@ -2,9 +2,13 @@ import {
   JupyterFrontEnd,
   JupyterFrontEndPlugin
 } from '@jupyterlab/application';
-import { ReactWidget } from '@jupyterlab/apputils';
+import {
+  ReactWidget,
+  SessionContext
+  // SessionContextDialogs
+} from '@jupyterlab/apputils';
 import { Panel } from '@lumino/widgets';
-import React, { useMemo } from 'react';
+import React, { FC, useEffect, useMemo, useState } from 'react';
 import {
   useQuery,
   QueryClient,
@@ -16,10 +20,11 @@ import { FontAwesomeIcon } from '@fortawesome/react-fontawesome';
 import {
   faAngleDown,
   faAngleRight,
-  faAnglesRight,
   faRightToBracket
 } from '@fortawesome/free-solid-svg-icons';
 import { Container, IconButton, Stack, Typography } from '@mui/material';
+import { Kernel, KernelMessage } from '@jupyterlab/services';
+import { IOutput } from '@jupyterlab/nbformat';
 
 /**
  * Initialization data for the cdm-tree-browser extension.
@@ -56,13 +61,16 @@ function onActivate(app: JupyterFrontEnd) {
         );
     }
   };
-  panel.addWidget(new TreeBrowserWidget());
+  panel.addWidget(new TreeBrowserWidget(app));
   app.shell.add(panel, 'left', { rank: 1 });
 }
 
 class TreeBrowserWidget extends ReactWidget {
-  constructor() {
+  private app: JupyterFrontEnd;
+
+  constructor(app: JupyterFrontEnd) {
     super();
+    this.app = app;
   }
 
   render(): JSX.Element {
@@ -71,7 +79,7 @@ class TreeBrowserWidget extends ReactWidget {
 
     return (
       <QueryClientProvider client={queryClient}>
-        <TreeBrowser />
+        <TreeBrowser jupyterApp={this.app} />
       </QueryClientProvider>
     );
   }
@@ -84,47 +92,52 @@ interface ITreeNode {
   children?: ITreeNode[];
 }
 
-function TreeBrowser() {
+const TreeBrowser: FC<{ jupyterApp: JupyterFrontEnd }> = ({ jupyterApp }) => {
+  const sessionContext = useSessionContext(jupyterApp);
   // For API calls we can use react-query (instead of rtk-query as redux is overkill)
   const query = useQuery({
     queryKey: ['namespaces'],
-    queryFn: async () => 'someData'
+    enabled: !!sessionContext && jupyterApp.serviceManager.isReady,
+    queryFn: () =>
+      queryKernel(
+        "import json\njson.dumps(['alexey', 'alexeyranjan', 'alexeyv8', 'credit_engine', 'default', 'enigma', 'fastgenomics', 'filipedb', 'gazi_db', 'img', 'janaka_db', 'modelseed_biochemistry', 'ontology_data', 'pangenome_ke', 'ranjandb', 'scarecrow_db', 'semsql', 'test'])",
+        sessionContext!
+      )
   });
   const doAction = (id: string) => {
     console.log('action', id);
   };
   console.log('namespaces', query.status, query.data, query.error);
+  console.log({ sessionContext });
   const treeData: ITreeNode[] = useMemo(() => {
     // perform any client-side transformations
-    return [
-      { id: '1', name: 'Empty', icon: faAnglesRight, children: [] },
-      { id: '2', name: 'Empty 2', icon: faAnglesRight, children: [] },
-      {
-        id: '3',
-        name: 'Some Data Source',
-        icon: faAnglesRight,
-        children: [
-          { id: 'c1', name: 'Data 1', onAction: doAction },
-          { id: 'c2', name: 'Data 2', onAction: doAction },
-          { id: 'c3', name: 'Data 3', onAction: doAction }
-        ]
-      },
-      {
-        id: '4',
-        name: 'Another Data Source',
-        icon: faAnglesRight,
-        children: [
-          { id: 'd1', name: 'Alice', onAction: doAction },
-          { id: 'd2', name: 'Bob', onAction: doAction },
-          { id: 'd3', name: 'Charlie', onAction: doAction }
-        ]
-      }
-    ]; // from query.data
+    if (
+      query?.data?.data &&
+      typeof query.data.data === 'object' &&
+      'text/plain' in query.data.data
+    ) {
+      return (
+        JSON.parse(
+          (query.data.data['text/plain'] as string).replace(/^'|'$/g, '')
+        ) as string[]
+      ).map(
+        (name: string, i): ITreeNode => ({
+          id: i.toString(),
+          name: name,
+          children: [
+            { id: `${i}.a`, name: 'Data 1', onAction: doAction },
+            { id: `${i}.b`, name: 'Data 2', onAction: doAction },
+            { id: `${i}.c`, name: 'Data 3', onAction: doAction }
+          ]
+        })
+      );
+    }
+    return [];
   }, [query.data]);
-  // For the tree we can use react-arborist
+  // For the tree we can use react-arborist (MIT)
   return (
     <Container className="jp-TreeBrowserWidget" maxWidth="sm">
-      <Tree initialData={treeData}>
+      <Tree data={treeData}>
         {({ node, style, dragHandle, tree }) => {
           return (
             <div
@@ -167,8 +180,67 @@ function TreeBrowser() {
       </Tree>
     </Container>
   );
-}
+};
 
-// https://github.com/jupyterlab/extension-examples/blob/main/kernel-messaging
+// Based on https://github.com/jupyterlab/extension-examples/blob/main/kernel-messaging
+
+const useSessionContext = (app: JupyterFrontEnd) => {
+  const [sc, setSc] = useState<SessionContext | undefined>();
+  useEffect(() => {
+    const manager = app.serviceManager;
+    const sessionContext = new SessionContext({
+      sessionManager: manager.sessions,
+      specsManager: manager.kernelspecs,
+      name: 'cdm-tree-browser'
+    });
+    void sessionContext
+      .initialize()
+      .then(async value => {
+        if (value) {
+          // const sessionContextDialogs = new SessionContextDialogs({});
+          // await sessionContextDialogs.selectKernel(sessionContext); // Show kernel selection dialog
+          await sessionContext.changeKernel({ name: 'python3' }); // skip dialog
+          setSc(sessionContext);
+        }
+      })
+      .catch(reason => {
+        console.error(`Failed to initialize the session.\n${reason}`);
+      });
+    return () => {
+      sessionContext.dispose();
+      setSc(undefined);
+    };
+  }, [app.shell.id]);
+  return sc;
+};
+
+const queryKernel = async (code: string, sessionContext: SessionContext) => {
+  const kernel = sessionContext?.session?.kernel;
+  if (!kernel) {
+    throw new Error('kernel DNE');
+  }
+  const future: Kernel.IFuture<
+    KernelMessage.IExecuteRequestMsg,
+    KernelMessage.IExecuteReplyMsg
+  > = kernel.requestExecute({ code });
+  const output = await new Promise<IOutput>(resolve => {
+    future.onIOPub = (msg: KernelMessage.IIOPubMessage): void => {
+      const msgType = msg.header.msg_type;
+      switch (msgType) {
+        case 'execute_result':
+        case 'display_data':
+        case 'update_display_data':
+          resolve(msg.content as IOutput);
+          break;
+        default:
+          break;
+      }
+    };
+  });
+
+  future.dispose();
+
+  return output;
+};
 
 export default plugin;
