@@ -72,3 +72,18 @@ export const queryKernel = async (
 
   return output;
 };
+
+export const parseKernelOutputJSON = <ExpectedType,>(
+  output?: IOutput
+): ExpectedType | undefined => {
+  if (
+    output?.data &&
+    typeof output.data === 'object' &&
+    'text/plain' in output.data
+  ) {
+    return JSON.parse(
+      (output.data['text/plain'] as string).replace(/^'|'$/g, '')
+    ) as ExpectedType;
+  }
+  return undefined;
+};

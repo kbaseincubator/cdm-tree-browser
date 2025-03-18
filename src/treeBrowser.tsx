@@ -2,7 +2,7 @@ import { JupyterFrontEnd } from '@jupyterlab/application';
 
 import React, { FC } from 'react';
 import { useQuery } from '@tanstack/react-query';
-import { Tree } from 'react-arborist';
+import { NodeRendererProps, Tree } from 'react-arborist';
 import { FontAwesomeIcon } from '@fortawesome/react-fontawesome';
 import {
   faAngleDown,
@@ -10,7 +10,11 @@ import {
   faRightToBracket
 } from '@fortawesome/free-solid-svg-icons';
 import { Container, IconButton, Stack, Typography } from '@mui/material';
-import { queryKernel, useSessionContext } from './kernelCommunication';
+import {
+  parseKernelOutputJSON,
+  queryKernel,
+  useSessionContext
+} from './kernelCommunication';
 
 export const TreeBrowser: FC<{ jupyterApp: JupyterFrontEnd }> = ({
   jupyterApp
@@ -27,16 +31,9 @@ export const TreeBrowser: FC<{ jupyterApp: JupyterFrontEnd }> = ({
         sessionContext!
       ),
     select: (data): ITreeNode[] => {
-      if (
-        data.data &&
-        typeof data.data === 'object' &&
-        'text/plain' in data.data
-      ) {
-        return (
-          JSON.parse(
-            (data.data['text/plain'] as string).replace(/^'|'$/g, '')
-          ) as string[]
-        ).map(
+      const json = parseKernelOutputJSON<string[]>(data);
+      if (json) {
+        return json.map(
           (name: string, i): ITreeNode => ({
             id: i.toString(),
             name: name,
@@ -59,48 +56,51 @@ export const TreeBrowser: FC<{ jupyterApp: JupyterFrontEnd }> = ({
   // For the tree we can use react-arborist (MIT)
   return (
     <Container className="jp-TreeBrowserWidget" maxWidth="sm">
-      <Tree data={query.data || []}>
-        {({ node, style, dragHandle, tree }) => {
-          return (
-            <div
-              style={style}
-              ref={dragHandle}
-              onClick={
-                !node.isLeaf ? () => tree.get(node.id)?.toggle() : undefined
-              }
-            >
-              <Stack direction={'row'} spacing={1} alignItems={'center'}>
-                {!node.isLeaf ? (
-                  <FontAwesomeIcon
-                    fixedWidth
-                    icon={node.isOpen ? faAngleDown : faAngleRight}
-                  />
-                ) : undefined}
-                <div>
-                  <Typography variant="body1">{node.data.name}</Typography>
-                </div>
-                <div>
-                  {node.isLeaf ? (
-                    node.data.onAction ? (
-                      <IconButton
-                        size={'small'}
-                        onClick={() => node.data.onAction?.(node.id)}
-                      >
-                        <FontAwesomeIcon
-                          fontSize={'inherit'}
-                          fixedWidth
-                          icon={faRightToBracket}
-                        />
-                      </IconButton>
-                    ) : undefined
-                  ) : undefined}
-                </div>
-              </Stack>
-            </div>
-          );
-        }}
-      </Tree>
+      <Tree data={query.data || []}>{NodeRenderer}</Tree>
     </Container>
+  );
+};
+
+const NodeRenderer: FC<NodeRendererProps<ITreeNode>> = ({
+  node,
+  style,
+  dragHandle,
+  tree
+}) => {
+  return (
+    <div
+      style={style}
+      ref={dragHandle}
+      onClick={!node.isLeaf ? () => tree.get(node.id)?.toggle() : undefined}
+    >
+      <Stack direction={'row'} spacing={1} alignItems={'center'}>
+        {!node.isLeaf ? (
+          <FontAwesomeIcon
+            fixedWidth
+            icon={node.isOpen ? faAngleDown : faAngleRight}
+          />
+        ) : undefined}
+        <div>
+          <Typography variant="body1">{node.data.name}</Typography>
+        </div>
+        <div>
+          {node.isLeaf ? (
+            node.data.onAction ? (
+              <IconButton
+                size={'small'}
+                onClick={() => node.data.onAction?.(node.id)}
+              >
+                <FontAwesomeIcon
+                  fontSize={'inherit'}
+                  fixedWidth
+                  icon={faRightToBracket}
+                />
+              </IconButton>
+            ) : undefined
+          ) : undefined}
+        </div>
+      </Stack>
+    </div>
   );
 };
 
