@@ -95,29 +95,3 @@ More information are provided within the [ui-tests](./ui-tests/README.md) README
 ### Packaging the extension
 
 See [RELEASE](RELEASE.md)
-
-# KBase dev notes
-
-from (https://github.com/innovationOUtside/jupyterlab_ou_brand_extension/blob/67948bd5f52829a849588b33221ae6404cf1cfa7/README.md?plain=1#L8)[https://github.com/innovationOUtside/jupyterlab_ou_brand_extension/blob/67948bd5f52829a849588b33221ae6404cf1cfa7/README.md?plain=1#L8]
-
-To build the wheel in /dist, run all but the push to PyPi
-
-This should be pulled out into a GH action that creates a release artifact.
-
-## Building and Pushing Newly Built Wheels to PyPi
-
-```bash
-# Build
-pip install build
-
-#Install the package
-pip install .
-
-# Node MUST BE INSTALLED
-python -m build
-# packages built into ./dist
-
-# Push to PyPi
-pip install twine
-twine upload MY_PACKAGE.whl
-```
