@@ -8,7 +8,8 @@ import {
   faFile,
   faFolder,
   faFolderOpen,
-  faCircleInfo
+  faCircleInfo,
+  faSpinner
 } from '@fortawesome/free-solid-svg-icons';
 import { TreeNodeType, TreeNodeMutator } from './sharedTypes';
 import { treeQueryManager } from './treeQueryManager';
@@ -106,16 +107,21 @@ export const TreeNodeRenderer: FC<ITreeNodeRendererProps> = ({
       <div onClick={handleNodeClick}>
         <Stack direction="row" spacing={0.5} alignItems="center">
           {/* Provider icon (larger, no folder) */}
-          {isProvider && node.data.icon && (
+          {isProvider && (
             <span style={{ fontSize: '1.2em' }}>
-              {node.data.icon}
+              {!node.data.children ? (
+                <FontAwesomeIcon icon={faSpinner} spin />
+              ) : (
+                node.data.icon
+              )}
             </span>
           )}
           {/* Expand/collapse icon for non-provider parent nodes */}
           {!node.isLeaf && !isProvider && (
             <FontAwesomeIcon
               fixedWidth
-              icon={node.isOpen ? faFolderOpen : faFolder}
+              icon={childNodesQuery.isLoading ? faSpinner : (node.isOpen ? faFolderOpen : faFolder)}
+              spin={childNodesQuery.isLoading}
             />
           )}
           {/* Node type icon for leaf nodes */}

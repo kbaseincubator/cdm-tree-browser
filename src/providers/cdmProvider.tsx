@@ -1,7 +1,7 @@
-import React, { FC } from 'react';
+import React, { FC, useState } from 'react';
 import { SessionContext } from '@jupyterlab/apputils';
 import { useQuery } from '@tanstack/react-query';
-import { Typography } from '@mui/material';
+import { Typography, Button } from '@mui/material';
 import { FontAwesomeIcon } from '@fortawesome/react-fontawesome';
 import { faDatabase, faTable } from '@fortawesome/free-solid-svg-icons';
 import { BaseTreeNodeType, TreeNodeType, ITreeDataProvider } from '../sharedTypes';
@@ -25,6 +25,7 @@ type TableSchema = {
 
 /** Displays table schema by calling get_table_schema mock function */
 const TableSchemaDisplay: FC<{ node: TreeNodeType<'database' | 'table'>; sessionContext: SessionContext | null }> = ({ node, sessionContext }) => {
+  const [showAllColumns, setShowAllColumns] = useState(false);
   const { data: schema, isLoading, error } = useQuery({
     queryKey: ['tableSchema', node.data?.database, node.name],
     queryFn: async () => {
@@ -65,15 +66,30 @@ const TableSchemaDisplay: FC<{ node: TreeNodeType<'database' | 'table'>; session
       <Typography variant="body2" gutterBottom>
         Columns ({schema.columns?.length || 0}):
       </Typography>
-      {schema.columns?.slice(0, 5).map((col: any, idx: number) => (
+      {schema.columns?.slice(0, showAllColumns ? undefined : 5).map((col: any, idx: number) => (
         <Typography key={idx} variant="body2" component="div" sx={{ ml: 2 }}>
           • {col.name} ({col.type})
         </Typography>
       ))}
-      {schema.columns?.length > 5 && (
-        <Typography variant="body2" color="text.secondary" sx={{ ml: 2 }}>
+      {schema.columns?.length > 5 && !showAllColumns && (
+        <Button
+          variant="text"
+          size="small"
+          onClick={() => setShowAllColumns(true)}
+          sx={{ ml: 2, p: 0, minWidth: 'auto', textTransform: 'none' }}
+        >
           ... and {schema.columns.length - 5} more columns
-        </Typography>
+        </Button>
+      )}
+      {showAllColumns && schema.columns?.length > 5 && (
+        <Button
+          variant="text"
+          size="small"
+          onClick={() => setShowAllColumns(false)}
+          sx={{ ml: 2, p: 0, minWidth: 'auto', textTransform: 'none' }}
+        >
+          Show less
+        </Button>
       )}
     </>
   );
