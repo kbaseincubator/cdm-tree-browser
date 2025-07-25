@@ -1,112 +1,126 @@
-import { JupyterFrontEnd } from '@jupyterlab/application';
+import React, { useState, FC, useCallback, useRef, useEffect } from 'react';
+import { JupyterFrontEnd, ILayoutRestorer } from '@jupyterlab/application';
+import { Tree, TreeApi } from 'react-arborist';
+import { useSessionContext } from './kernelCommunication';
+import { TreeNodeType, TreeNodeMutator } from '../sharedTypes';
+import { treeQueryManager, updateNodeInTree } from '../treeQueryManager';
+import { useTreeDimensions } from '../hooks/useTreeDimensions';
+import { useInfoPanel } from '../hooks/useInfoPanel';
+import { TreeDataLoader } from '../TreeDataLoader';
+import { TreeNodeRenderer } from '../TreeNodeRenderer';
+import { InfoPanel } from '../InfoPanel';
 
-import React, { FC } from 'react';
-import { useQuery } from '@tanstack/react-query';
-import { NodeRendererProps, Tree } from 'react-arborist';
-import { FontAwesomeIcon } from '@fortawesome/react-fontawesome';
-import {
-  faAngleDown,
-  faAngleRight,
-  faRightToBracket
-} from '@fortawesome/free-solid-svg-icons';
-import { Container, IconButton, Stack, Typography } from '@mui/material';
-import {
-  parseKernelOutputJSON,
-  queryKernel,
-  useSessionContext
-} from './kernelCommunication';
+interface ITreeBrowserProps {
+  jupyterApp: JupyterFrontEnd;
+  restorer: ILayoutRestorer;
+}
 
-export const TreeBrowser: FC<{ jupyterApp: JupyterFrontEnd }> = ({
-  jupyterApp
-}) => {
+/**
+ * Main Tree Browser Component
+ *
+ * This is the primary component that manages the tree state and renders the tree UI.
+ * It automatically handles all configured data providers and their loading states.
+ */
+export const TreeBrowser: FC<ITreeBrowserProps> = ({ jupyterApp, restorer }) => {
   const sessionContext = useSessionContext(jupyterApp);
-  // For API calls we can use react-query (instead of rtk-query as redux is overkill)
+  const containerRef = useRef<HTMLDivElement>(null);
+  const treeRef = useRef<TreeApi<TreeNodeType>>(null);
+  const containerDimensions = useTreeDimensions(containerRef);
+  const { openNode, toggleInfo, closeInfo } = useInfoPanel();
 
-  const query = useQuery({
-    queryKey: ['namespaces'],
-    enabled: !!sessionContext && jupyterApp.serviceManager.isReady,
-    queryFn: () =>
-      queryKernel(
-        "import json\njson.dumps(['alexey', 'alexeyranjan', 'alexeyv8', 'credit_engine', 'default', 'enigma', 'fastgenomics', 'filipedb', 'gazi_db', 'img', 'janaka_db', 'modelseed_biochemistry', 'ontology_data', 'pangenome_ke', 'ranjandb', 'scarecrow_db', 'semsql', 'test'])",
-        sessionContext!
-      ),
-    select: (data): ITreeNode[] => {
-      const json = parseKernelOutputJSON<string[]>(data);
-      if (json) {
-        return json.map(
-          (name: string, i): ITreeNode => ({
-            id: i.toString(),
-            name: name,
-            children: [
-              { id: `${i}.a`, name: 'Data 1', onAction: doAction },
-              { id: `${i}.b`, name: 'Data 2', onAction: doAction },
-              { id: `${i}.c`, name: 'Data 3', onAction: doAction }
-            ]
-          })
-        );
-      }
-      return [];
-    }
-  });
-
-  const doAction = (id: string) => {
-    console.log('action', id);
-  };
-
-  // For the tree we can use react-arborist (MIT)
-  return (
-    <Container className="jp-TreeBrowserWidget" maxWidth="sm">
-      <Tree data={query.data || []}>{NodeRenderer}</Tree>
-    </Container>
+  // Initialize tree with root nodes for each configured provider
+  const [treeData, setTreeData] = useState<TreeNodeType[]>(
+    treeQueryManager.initialTreeStructure
   );
-};
 
-const NodeRenderer: FC<NodeRendererProps<ITreeNode>> = ({
-  node,
-  style,
-  dragHandle,
-  tree
-}) => {
+  // State for tree node restoration
+  const [openNodeIds, setOpenNodeIds] = useState<string[]>([]);
+  const [hasUserInteracted, setHasUserInteracted] = useState(false);
+
+  // Restore saved open node state on mount
+  useEffect(() => {
+    try {
+      const savedState = localStorage.getItem('cdm-tree-browser-open-nodes');
+      if (savedState) {
+        const parsedState = JSON.parse(savedState);
+        if (Array.isArray(parsedState)) {
+          setOpenNodeIds(parsedState);
+        }
+      }
+    } catch (error) {
+      console.warn('Failed to restore tree state:', error);
+    }
+  }, []);
+
+
+  // Update open state tracking when user interacts with tree
+  const handleTreeStateChange = useCallback(() => {
+    setHasUserInteracted(true);
+    if (treeRef.current) {
+      const currentOpenIds = treeRef.current.visibleNodes
+        .filter(node => node.isOpen)
+        .map(node => node.id);
+      setOpenNodeIds(currentOpenIds);
+      localStorage.setItem('cdm-tree-browser-open-nodes', JSON.stringify(currentOpenIds));
+    }
+  }, []);
+
+  // Callback to update individual nodes in the tree structure
+  const handleNodeUpdate = useCallback<TreeNodeMutator>(
+    (nodeId: string, updatedNode: TreeNodeType) => {
+      setTreeData(currentTreeData =>
+        updateNodeInTree(currentTreeData, nodeId, updatedNode)
+      );
+    },
+    []
+  );
+
   return (
     <div
-      style={style}
-      ref={dragHandle}
-      onClick={!node.isLeaf ? () => tree.get(node.id)?.toggle() : undefined}
+      ref={containerRef}
+      className="jp-TreeBrowserWidget"
+      style={{
+        position: 'relative',
+        height: '100%',
+        width: '100%',
+        padding: '8px'
+      }}
     >
-      <Stack direction={'row'} spacing={1} alignItems={'center'}>
-        {!node.isLeaf ? (
-          <FontAwesomeIcon
-            fixedWidth
-            icon={node.isOpen ? faAngleDown : faAngleRight}
+      {/* Invisible component that manages data loading for all providers */}
+      {sessionContext && (
+        <TreeDataLoader
+          treeData={treeData}
+          sessionContext={sessionContext}
+          onNodeUpdate={handleNodeUpdate}
+        />
+      )}
+      {/* The actual tree UI component - takes full height */}
+      <Tree
+        ref={treeRef}
+        data={treeData}
+        openByDefault={false}
+        width={containerDimensions.width}
+        height={containerDimensions.height}
+      >
+        {nodeProps => (
+          <TreeNodeRenderer
+            key={nodeProps.node.id}
+            {...nodeProps}
+            sessionContext={sessionContext!}
+            onNodeUpdate={handleNodeUpdate}
+            onInfoClick={toggleInfo}
+            onToggle={handleTreeStateChange}
+            restoreOpenNodeIds={hasUserInteracted ? [] : openNodeIds}
           />
-        ) : undefined}
-        <div>
-          <Typography variant="body1">{node.data.name}</Typography>
-        </div>
-        <div>
-          {node.isLeaf ? (
-            node.data.onAction ? (
-              <IconButton
-                size={'small'}
-                onClick={() => node.data.onAction?.(node.id)}
-              >
-                <FontAwesomeIcon
-                  fontSize={'inherit'}
-                  fixedWidth
-                  icon={faRightToBracket}
-                />
-              </IconButton>
-            ) : undefined
-          ) : undefined}
-        </div>
-      </Stack>
+        )}
+      </Tree>
+
+      {/* Fixed bottom panel for node info */}
+      <InfoPanel
+        openNode={openNode}
+        sessionContext={sessionContext || null}
+        onClose={closeInfo}
+      />
     </div>
   );
 };
-
-interface ITreeNode {
-  id: string;
-  name: string;
-  onAction?: (id: string) => void;
-  children?: ITreeNode[];
-}

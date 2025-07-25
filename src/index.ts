@@ -1,6 +1,7 @@
 import {
   JupyterFrontEnd,
-  JupyterFrontEndPlugin
+  JupyterFrontEndPlugin,
+  ILayoutRestorer
 } from '@jupyterlab/application';
 
 import { Panel } from '@lumino/widgets';
@@ -17,14 +18,14 @@ const treeIcon = new LabIcon({
 });
 
 /**
- * Initialization data for the cdm-tree-browser extension.
+ * CDM Tree Browser JupyterLab extension plugin
  */
 const plugin: JupyterFrontEndPlugin<void> = {
   id: 'cdm-tree-browser:plugin',
-  description:
-    'A JupyterLab extension for browsing file/data trees in KBase CDM JupyterLab.',
+  description: 'A JupyterLab extension for browsing file/data trees in KBase CDM JupyterLab.',
   autoStart: true,
-  activate: (app: JupyterFrontEnd) => {
+  requires: [ILayoutRestorer],
+  activate: (app: JupyterFrontEnd, restorer: ILayoutRestorer) => {
     console.log('JupyterLab extension cdm-tree-browser is activated!');
 
     // Create QueryClient for React Query
@@ -42,22 +43,26 @@ const plugin: JupyterFrontEndPlugin<void> = {
       React.createElement(
         QueryClientProvider,
         { client: queryClient },
-        React.createElement(TreeBrowser, { jupyterApp: app })
+        React.createElement(TreeBrowser, { jupyterApp: app, restorer })
       )
     );
 
-    // Create a new panel for the left sidebar
+    // Create sidebar panel
     const panel = new Panel();
     panel.id = 'cdm-tree-browser-panel';
     panel.title.closable = true;
     panel.title.icon = treeIcon;
-    panel.title.label = 'CDM Browser';
+    panel.title.label = '';
 
-    // Add the React widget to the panel
+    // Configure widget styling
+    widget.addClass('jp-TreeBrowserWidget-root');
+    widget.node.style.height = '100%';
+    widget.node.style.overflow = 'hidden';
+
+    // Assemble and register panel
     panel.addWidget(widget);
-
-    // Add the panel to the left sidebar
     app.shell.add(panel, 'left', { rank: 1 });
+    restorer.add(panel, 'cdm-tree-browser-panel');
   }
 };
 
