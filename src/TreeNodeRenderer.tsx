@@ -19,6 +19,10 @@ interface ITreeNodeRendererProps extends NodeRendererProps<TreeNodeType> {
   sessionContext: SessionContext;
   onNodeUpdate: TreeNodeMutator;
   onInfoClick: (nodeId: string, node: TreeNodeType) => void;
+  /** Callback triggered when node open state changes */
+  onToggle?: () => void;
+  /** Array of node IDs that should be restored to open state */
+  restoreOpenNodeIds: string[];
 }
 
 /** Function to get the appropriate icon for a node */
@@ -46,7 +50,9 @@ export const TreeNodeRenderer: FC<ITreeNodeRendererProps> = ({
   tree,
   sessionContext,
   onNodeUpdate,
-  onInfoClick
+  onInfoClick,
+  onToggle,
+  restoreOpenNodeIds
 }) => {
   
   // Determine if we need to load children (parent is open but children not loaded)
@@ -89,9 +95,31 @@ export const TreeNodeRenderer: FC<ITreeNodeRendererProps> = ({
     }
   }, [childNodesQuery.data, node.id, node.data, onNodeUpdate]);
 
+  // Auto-restore previously open node state for lazy-loaded nodes
+  useEffect(() => {
+    const shouldRestore = restoreOpenNodeIds.includes(node.id) && 
+                         !node.isOpen && 
+                         !node.isLeaf;
+    
+    if (shouldRestore) {
+      const treeNode = tree.get(node.id);
+      if (treeNode) {
+        treeNode.open();
+        // Notify parent of state change after DOM update
+        if (onToggle) {
+          setTimeout(onToggle, 0);
+        }
+      }
+    }
+  }, [node.id, node.isOpen, node.isLeaf, restoreOpenNodeIds, tree, onToggle]);
+
   const handleNodeClick = () => {
     if (!node.isLeaf) {
       tree.get(node.id)?.toggle();
+      // Notify parent of state change after DOM update
+      if (onToggle) {
+        setTimeout(onToggle, 0);
+      }
     }
   };
 

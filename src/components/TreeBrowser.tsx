@@ -1,6 +1,6 @@
-import React, { useState, FC, useCallback, useRef } from 'react';
-import { JupyterFrontEnd } from '@jupyterlab/application';
-import { Tree } from 'react-arborist';
+import React, { useState, FC, useCallback, useRef, useEffect } from 'react';
+import { JupyterFrontEnd, ILayoutRestorer } from '@jupyterlab/application';
+import { Tree, TreeApi } from 'react-arborist';
 import { useSessionContext } from './kernelCommunication';
 import { TreeNodeType, TreeNodeMutator } from '../sharedTypes';
 import { treeQueryManager, updateNodeInTree } from '../treeQueryManager';
@@ -12,6 +12,7 @@ import { InfoPanel } from '../InfoPanel';
 
 interface ITreeBrowserProps {
   jupyterApp: JupyterFrontEnd;
+  restorer: ILayoutRestorer;
 }
 
 /**
@@ -20,9 +21,10 @@ interface ITreeBrowserProps {
  * This is the primary component that manages the tree state and renders the tree UI.
  * It automatically handles all configured data providers and their loading states.
  */
-export const TreeBrowser: FC<ITreeBrowserProps> = ({ jupyterApp }) => {
+export const TreeBrowser: FC<ITreeBrowserProps> = ({ jupyterApp, restorer }) => {
   const sessionContext = useSessionContext(jupyterApp);
   const containerRef = useRef<HTMLDivElement>(null);
+  const treeRef = useRef<TreeApi<TreeNodeType>>(null);
   const containerDimensions = useTreeDimensions(containerRef);
   const { openNode, toggleInfo, closeInfo } = useInfoPanel();
 
@@ -30,6 +32,38 @@ export const TreeBrowser: FC<ITreeBrowserProps> = ({ jupyterApp }) => {
   const [treeData, setTreeData] = useState<TreeNodeType[]>(
     treeQueryManager.initialTreeStructure
   );
+
+  // State for tree node restoration
+  const [openNodeIds, setOpenNodeIds] = useState<string[]>([]);
+  const [hasUserInteracted, setHasUserInteracted] = useState(false);
+
+  // Restore saved open node state on mount
+  useEffect(() => {
+    try {
+      const savedState = localStorage.getItem('cdm-tree-browser-open-nodes');
+      if (savedState) {
+        const parsedState = JSON.parse(savedState);
+        if (Array.isArray(parsedState)) {
+          setOpenNodeIds(parsedState);
+        }
+      }
+    } catch (error) {
+      console.warn('Failed to restore tree state:', error);
+    }
+  }, []);
+
+
+  // Update open state tracking when user interacts with tree
+  const handleTreeStateChange = useCallback(() => {
+    setHasUserInteracted(true);
+    if (treeRef.current) {
+      const currentOpenIds = treeRef.current.visibleNodes
+        .filter(node => node.isOpen)
+        .map(node => node.id);
+      setOpenNodeIds(currentOpenIds);
+      localStorage.setItem('cdm-tree-browser-open-nodes', JSON.stringify(currentOpenIds));
+    }
+  }, []);
 
   // Callback to update individual nodes in the tree structure
   const handleNodeUpdate = useCallback<TreeNodeMutator>(
@@ -62,6 +96,7 @@ export const TreeBrowser: FC<ITreeBrowserProps> = ({ jupyterApp }) => {
       )}
       {/* The actual tree UI component - takes full height */}
       <Tree
+        ref={treeRef}
         data={treeData}
         openByDefault={false}
         width={containerDimensions.width}
@@ -74,6 +109,8 @@ export const TreeBrowser: FC<ITreeBrowserProps> = ({ jupyterApp }) => {
             sessionContext={sessionContext!}
             onNodeUpdate={handleNodeUpdate}
             onInfoClick={toggleInfo}
+            onToggle={handleTreeStateChange}
+            restoreOpenNodeIds={hasUserInteracted ? [] : openNodeIds}
           />
         )}
       </Tree>
