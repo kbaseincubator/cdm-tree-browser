@@ -49,8 +49,9 @@ export const TreeNodeRenderer: FC<ITreeNodeRendererProps> = ({
 }) => {
   
   // Determine if we need to load children (parent is open but children not loaded)
+  // Only load children for nodes that are configured as parent nodes in the provider, excluding ROOT nodes
   const shouldLoadChildren =
-    node.parent?.isOpen && node.data.children === undefined;
+    node.parent?.isOpen && node.data.children === undefined && node.data.isParentNode && node.data.type !== 'ROOT';
 
   // Query to fetch child nodes when needed
   const childNodesQuery = useQuery({

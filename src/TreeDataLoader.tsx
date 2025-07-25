@@ -83,7 +83,7 @@ const RootDataLoader: FC<IRootDataLoaderProps> = ({
       );
     }
 
-    if (rootNodesQuery.data) {
+    if (rootNodesQuery.data && rootNode.children !== rootNodesQuery.data) {
       onNodeUpdate(rootNode.id, {
         ...rootNode,
         children: rootNodesQuery.data

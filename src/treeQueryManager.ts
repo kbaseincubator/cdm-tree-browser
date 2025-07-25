@@ -140,10 +140,14 @@ export function updateNodeInTree(
 
     // Recursively update in children if they exist
     if (node.children) {
-      return {
-        ...node,
-        children: updateNodeInTree(node.children, nodeId, updatedNode)
-      };
+      const updatedChildren = updateNodeInTree(node.children, nodeId, updatedNode);
+      // Only create new object if children actually changed
+      if (updatedChildren !== node.children) {
+        return {
+          ...node,
+          children: updatedChildren
+        };
+      }
     }
 
     return node;
