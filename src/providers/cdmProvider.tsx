@@ -33,7 +33,7 @@ const TableSchemaDisplay: FC<{ node: TreeNodeType<'database' | 'table'>; session
       
       // Setup mock functions then call get_table_schema with node's database and name
       const { data, error } = await queryKernel(
-        `import cdm_tree_browser; cdm_tree_browser.setup_cdm_mock_responses(); result = get_table_schema("${node.data?.database}", "${node.name}", return_json=True); result`,
+        `import cdm_tree_browser; get_db_structure, get_table_schema = cdm_tree_browser.get_cdm_methods(); result = get_table_schema("${node.data?.database}", "${node.name}", return_json=True); result`,
         sessionContext
       );
       
@@ -110,7 +110,7 @@ export const cdmProvider: ITreeDataProvider<'database' | 'table'> = {
   },
   fetchRootNodes: async (sessionContext: SessionContext) => {
     const { data, error } = await queryKernel(
-      'import cdm_tree_browser; cdm_tree_browser.setup_cdm_mock_responses(); result = get_db_structure(with_schema=False,return_json=True); result',
+      'import cdm_tree_browser; get_db_structure, get_table_schema = cdm_tree_browser.get_cdm_methods(); result = get_db_structure(with_schema=False,return_json=True); result',
       sessionContext
     );
 

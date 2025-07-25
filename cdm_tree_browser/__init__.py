@@ -17,4 +17,4 @@ def _jupyter_labextension_paths():
 
 
 # Import and expose the setup function
-from .mock_data import setup_cdm_mock_responses
+from .mock_data import get_cdm_methods

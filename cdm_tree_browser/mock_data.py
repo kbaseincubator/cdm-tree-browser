@@ -1,14 +1,23 @@
 import json
 
 
-def setup_cdm_mock_responses():
+def get_cdm_methods():
     """
-    Sets up CDM mock response functions in the global namespace.
-    Call this function to make get_db_structure and get_table_schema available.
+    Returns CDM data access methods.
+    Returns real spark.data_store functions if available, otherwise mock functions.
     """
-    # Avoid redefining functions if already setup
-    if 'get_db_structure' in globals() and 'get_table_schema' in globals():
-        return
+    # Try to import from spark.data_store first
+    try:
+        from spark.data_store import (
+            get_databases,
+            get_tables,
+            get_table_schema,
+            get_db_structure,
+        )
+        print("Using real spark.data_store functions")
+        return get_db_structure, get_table_schema
+    except ImportError:
+        print("spark.data_store not available, using mock functions")
     
     def get_db_structure(with_schema=True, return_json=False):
         """
@@ -162,19 +171,4 @@ def setup_cdm_mock_responses():
             return json.dumps(schema)
         return schema
     
-    # Inject functions into kernel's global namespace using frame inspection
-    import inspect
-    frame = inspect.currentframe()
-    try:
-        # Get the caller's frame (kernel execution context)
-        caller_frame = frame.f_back
-        if caller_frame:
-            # Inject into kernel globals so functions are available for direct calls
-            caller_frame.f_globals['get_db_structure'] = get_db_structure
-            caller_frame.f_globals['get_table_schema'] = get_table_schema
-        else:
-            # Fallback to module globals if no caller frame
-            globals()['get_db_structure'] = get_db_structure
-            globals()['get_table_schema'] = get_table_schema
-    finally:
-        del frame
+    return get_db_structure, get_table_schema
