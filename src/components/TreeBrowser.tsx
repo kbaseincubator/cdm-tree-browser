@@ -1,20 +1,28 @@
-import React, { useState, FC, useEffect, useCallback } from 'react';
+import React, { useState, FC, useEffect, useCallback, useRef } from 'react';
 import { JupyterFrontEnd } from '@jupyterlab/application';
 import { SessionContext } from '@jupyterlab/apputils';
 import { useQuery } from '@tanstack/react-query';
 import { Tree, NodeRendererProps } from 'react-arborist';
-import { Container, IconButton, Stack, Typography } from '@mui/material';
+import { IconButton, Stack, Typography, Collapse, Paper } from '@mui/material';
 import { FontAwesomeIcon } from '@fortawesome/react-fontawesome';
 import {
-  faAngleDown,
-  faAngleRight,
-  faRightToBracket
+  faRightToBracket,
+  faFile,
+  faFolder,
+  faFolderOpen,
+  faDatabase,
+  faTable,
+  faInfo
 } from '@fortawesome/free-solid-svg-icons';
 import {
   parseKernelOutputJSON,
   queryKernel,
   useSessionContext
 } from './kernelCommunication';
+
+// Global state for info panel - only one node can show info at a time
+let openInfoNodeId: string | null = null;
+let openInfoNode: TreeNodeType | null = null;
 
 /**
  * Core Types for Tree Browser
@@ -24,7 +32,7 @@ import {
  * Represents a single node in the tree structure
  * @template T - Union type of supported node types (e.g., 'database' | 'table')
  */
-type TreeNodeType<T extends string = string> = {
+type TreeNodeType<T extends string = string, D = any> = {
   /** Unique identifier for the node */
   id: string;
   /** Display name shown in the tree */
@@ -33,8 +41,14 @@ type TreeNodeType<T extends string = string> = {
   type: T;
   /** Whether this node contains actionable content */
   hasContent?: boolean;
-  /** Child nodes - undefined means not loaded, empty array means no children */
+  /** Child nodes - undefined means not loaded, empty array means loaded with no children */
   children?: TreeNodeType[];
+  /** Custom icon to display for this node */
+  icon?: React.ReactNode;
+  /** Whether this node has children - true = has children, false = no children, undefined = unknown */
+  hasChildren?: boolean;
+  /** Arbitrary data for custom renderers (e.g., database name for table nodes) */
+  data?: D;
 };
 
 /**
@@ -56,6 +70,16 @@ interface ITreeDataProvider<T extends string = string> {
       sessionContext: SessionContext
     ) => Promise<TreeNodeType<T>[]>;
   };
+  /** Custom icon for this provider's root node */
+  icon?: React.ReactNode;
+  /** Map of node type to default icon */
+  nodeTypeIcons?: {
+    [K in T]?: React.ReactNode;
+  };
+  /** Custom info panel renderers by node type - receives sessionContext for API calls */
+  nodeTypeInfoRenderers?: {
+    [K in T]?: (node: TreeNodeType<K>, sessionContext: SessionContext | null) => React.ReactNode;
+  };
 }
 
 /** Function type for updating nodes in the tree */
@@ -66,6 +90,106 @@ interface ITreeNodeRendererProps extends NodeRendererProps<TreeNodeType> {
   sessionContext: SessionContext;
   onNodeUpdate: TreeNodeMutator;
 }
+
+/** Function to get provider configuration for a node */
+const getNodeProvider = (node: TreeNodeType, treeData: TreeNodeType[]): ITreeDataProvider | undefined => {
+  const nodeLocation = findNodeInTree(node.id, treeData);
+  if (!nodeLocation) return undefined;
+
+  const { ancestors } = nodeLocation;
+  const providerName = ancestors[0]?.name || node.name;
+  return treeQueryManager.dataProviders.find(p => p.name === providerName);
+};
+
+/** Function to get the appropriate icon for a node */
+const getNodeIcon = (node: TreeNodeType, isOpen?: boolean): React.ReactNode => {
+  // Use custom icon if provided
+  if (node.icon) {
+    return node.icon;
+  }
+  
+  // Default to file icon for nodes without custom icons
+  return <FontAwesomeIcon icon={faFile} />;
+};
+
+/** Function to get the appropriate info renderer for a node */
+const getNodeInfoRenderer = (node: TreeNodeType, treeData: TreeNodeType[], sessionContext: SessionContext | null): React.ReactNode | undefined => {
+  const provider = getNodeProvider(node, treeData);
+  const renderer = provider?.nodeTypeInfoRenderers?.[node.type];
+  return renderer ? renderer(node, sessionContext) : undefined;
+};
+
+/** Schema structure returned by get_table_schema mock function */
+type TableSchema = {
+  database: string;
+  table: string;
+  columns: Array<{
+    name: string;
+    type: string;
+    nullable?: boolean;
+    primary_key?: boolean;
+    foreign_key?: string;
+  }>;
+};
+
+/** Displays table schema by calling get_table_schema mock function */
+const TableSchemaDisplay: FC<{ node: TreeNodeType; sessionContext: SessionContext | null }> = ({ node, sessionContext }) => {
+  const { data: schema, isLoading, error } = useQuery({
+    queryKey: ['tableSchema', node.data?.database, node.name],
+    queryFn: async () => {
+      if (!sessionContext) throw new Error('No session context');
+      
+      // Setup mock functions then call get_table_schema with node's database and name
+      const { data, error } = await queryKernel(
+        `import cdm_tree_browser; cdm_tree_browser.setup_cdm_mock_responses(); result = get_table_schema("${node.data?.database}", "${node.name}", return_json=True); result`,
+        sessionContext
+      );
+      
+      if (error) {
+        alert(`Table schema error: ${error.message}`);
+        throw error;
+      }
+      
+      const schema = parseKernelOutputJSON<TableSchema>(data);
+      if (!schema) throw new Error('No schema data returned');
+      
+      return schema;
+    },
+    enabled: !!sessionContext && !!node.data?.database
+  });
+
+  if (isLoading) return <Typography>Loading schema...</Typography>;
+  if (error) return (
+    <Typography color="error">
+      Error loading schema: {error instanceof Error ? error.message : 'Unknown error'}
+    </Typography>
+  );
+  if (!schema) return <Typography>{node.name}</Typography>;
+
+  return (
+    <>
+      <Typography variant="h6" gutterBottom>
+        {schema.table}
+      </Typography>
+      <Typography variant="body2" color="text.secondary" gutterBottom>
+        Database: {schema.database}
+      </Typography>
+      <Typography variant="body2" gutterBottom>
+        Columns ({schema.columns?.length || 0}):
+      </Typography>
+      {schema.columns?.slice(0, 5).map((col: any, idx: number) => (
+        <Typography key={idx} variant="body2" component="div" sx={{ ml: 2 }}>
+          • {col.name} ({col.type})
+        </Typography>
+      ))}
+      {schema.columns?.length > 5 && (
+        <Typography variant="body2" color="text.secondary" sx={{ ml: 2 }}>
+          ... and {schema.columns.length - 5} more columns
+        </Typography>
+      )}
+    </>
+  );
+};
 
 /**
  * Tree Query Manager Configuration
@@ -116,15 +240,30 @@ interface ITreeNodeRendererProps extends NodeRendererProps<TreeNodeType> {
 const treeQueryManager = createTreeQueryManager([
   // CDM Database Provider - fetches database and table structure
   {
-    name: 'cdmDB',
+    name: 'CDM Data Store',
     supportedNodeTypes: ['database', 'table'],
+    icon: <FontAwesomeIcon icon={faDatabase} />,
+    nodeTypeIcons: {
+      database: <FontAwesomeIcon icon={faDatabase} />,
+      table: <FontAwesomeIcon icon={faTable} />
+    },
+    nodeTypeInfoRenderers: {
+      table: (node, sessionContext) => <TableSchemaDisplay node={node} sessionContext={sessionContext} />
+    },
     fetchRootNodes: async (sessionContext: SessionContext) => {
-      const output = await queryKernel(
-        'get_db_structure(with_schema=False,return_json=True)',
+      const { data, error } = await queryKernel(
+        'import cdm_tree_browser; cdm_tree_browser.setup_cdm_mock_responses(); result = get_db_structure(with_schema=False,return_json=True); result',
         sessionContext
       );
+
+      if (error) {
+        console.error('CDM provider: Failed to fetch root nodes:', error);
+        alert(`CDM provider error: ${error.message}`);
+        return [];
+      }
+
       const databaseStructure =
-        parseKernelOutputJSON<Record<string, string[]>>(output);
+        parseKernelOutputJSON<Record<string, string[]>>(data);
 
       if (!databaseStructure) {
         return [];
@@ -136,11 +275,14 @@ const treeQueryManager = createTreeQueryManager([
           name: databaseId,
           type: 'database' as const,
           hasContent: false,
+          hasChildren: true,
           children: tableNames.map(tableName => ({
             id: `${databaseId}//${tableName}`,
             name: tableName,
             type: 'table' as const,
-            hasContent: true
+            hasContent: true,
+            hasChildren: false,
+            data: { database: databaseId }
           }))
         })
       );
@@ -164,6 +306,9 @@ interface ITreeBrowserProps {
  */
 export const TreeBrowser: FC<ITreeBrowserProps> = ({ jupyterApp }) => {
   const sessionContext = useSessionContext(jupyterApp);
+  const containerRef = useRef<HTMLDivElement>(null);
+  const [containerDimensions, setContainerDimensions] = useState({ width: 400, height: 600 });
+  
   // Initialize tree with root nodes for each configured provider
   const [treeData, setTreeData] = useState<TreeNodeType[]>(
     treeQueryManager.initialTreeStructure
@@ -179,8 +324,30 @@ export const TreeBrowser: FC<ITreeBrowserProps> = ({ jupyterApp }) => {
     []
   );
 
+  // Measure container dimensions for Tree component using ResizeObserver
+  useEffect(() => {
+    if (!containerRef.current) return;
+
+    const resizeObserver = new ResizeObserver((entries) => {
+      for (const entry of entries) {
+        const { width, height } = entry.contentRect;
+        // Account for padding (8px on all sides = 16px total)
+        setContainerDimensions({ 
+          width: Math.max(width - 16, 200), 
+          height: Math.max(height - 16, 400) 
+        });
+      }
+    });
+
+    resizeObserver.observe(containerRef.current);
+
+    return () => {
+      resizeObserver.disconnect();
+    };
+  }, []);
+
   return (
-    <Container className="jp-TreeBrowserWidget" maxWidth="sm">
+    <div ref={containerRef} className="jp-TreeBrowserWidget" style={{ position: 'relative', height: '100%', width: '100%', padding: '8px' }}>
       {/* Invisible component that manages data loading for all providers */}
       {sessionContext && (
         <TreeDataLoader
@@ -189,17 +356,58 @@ export const TreeBrowser: FC<ITreeBrowserProps> = ({ jupyterApp }) => {
           onNodeUpdate={handleNodeUpdate}
         />
       )}
-      {/* The actual tree UI component */}
-      <Tree data={treeData}>
+      {/* The actual tree UI component - takes full height */}
+      <Tree 
+        data={treeData} 
+        openByDefault={false}
+        width={containerDimensions.width}
+        height={containerDimensions.height}
+      >
         {nodeProps => (
           <TreeNodeRenderer
+            key={nodeProps.node.id}
             {...nodeProps}
             sessionContext={sessionContext!}
             onNodeUpdate={handleNodeUpdate}
           />
         )}
       </Tree>
-    </Container>
+      
+      {/* Fixed bottom panel for node info */}
+      <Collapse in={openInfoNodeId !== null}>
+        <Paper sx={{ 
+          position: 'absolute', 
+          bottom: 0, 
+          left: 0, 
+          right: 0, 
+          p: 2, 
+          bgcolor: 'grey.50', 
+          borderTop: 1, 
+          borderColor: 'divider',
+          zIndex: 1000
+        }}>
+          {openInfoNode && (
+            <>
+              {getNodeInfoRenderer(openInfoNode, treeData, sessionContext || null) || (
+                <>
+                  <Typography variant="h6" gutterBottom>
+                    {openInfoNode.name}
+                  </Typography>
+                  <Typography variant="body2" color="text.secondary" gutterBottom>
+                    Type: {openInfoNode.type}
+                  </Typography>
+                  <Typography variant="body2">
+                    Lorem ipsum dolor sit amet, consectetur adipiscing elit. Sed do eiusmod 
+                    tempor incididunt ut labore et dolore magna aliqua. Ut enim ad minim veniam, 
+                    quis nostrud exercitation ullamco laboris nisi ut aliquip ex ea commodo consequat.
+                  </Typography>
+                </>
+              )}
+            </>
+          )}
+        </Paper>
+      </Collapse>
+    </div>
   );
 };
 
@@ -218,6 +426,8 @@ const TreeNodeRenderer: FC<ITreeNodeRendererProps> = ({
   sessionContext,
   onNodeUpdate
 }) => {
+  const [, forceUpdate] = useState({});
+  
   // Determine if we need to load children (parent is open but children not loaded)
   const shouldLoadChildren =
     node.parent?.isOpen && node.data.children === undefined;
@@ -263,28 +473,65 @@ const TreeNodeRenderer: FC<ITreeNodeRendererProps> = ({
     }
   };
 
+  const handleInfoClick = (e: React.MouseEvent) => {
+    e.stopPropagation();
+    if (openInfoNodeId === node.id) {
+      openInfoNodeId = null;
+      openInfoNode = null;
+    } else {
+      openInfoNodeId = node.id;
+      openInfoNode = node.data;
+    }
+    forceUpdate({});
+  };
+
+  const isProvider = node.data.type === 'ROOT';
+
   return (
-    <div style={style} ref={dragHandle} onClick={handleNodeClick}>
-      <Stack direction="row" spacing={1} alignItems="center">
-        {/* Expand/collapse icon for parent nodes */}
-        {!node.isLeaf && (
-          <FontAwesomeIcon
-            fixedWidth
-            icon={node.isOpen ? faAngleDown : faAngleRight}
-          />
-        )}
-        <Typography variant="body1">{node.data.name}</Typography>
-        {/* Action button for leaf nodes */}
-        {node.isLeaf && (
-          <IconButton size="small">
+    <div style={style} ref={dragHandle}>
+      <div onClick={handleNodeClick}>
+        <Stack direction="row" spacing={0.5} alignItems="center">
+          {/* Provider icon (larger, no folder) */}
+          {isProvider && node.data.icon && (
+            <span style={{ fontSize: '1.2em' }}>
+              {node.data.icon}
+            </span>
+          )}
+          {/* Expand/collapse icon for non-provider parent nodes */}
+          {!node.isLeaf && !isProvider && (
             <FontAwesomeIcon
-              fontSize="inherit"
               fixedWidth
-              icon={faRightToBracket}
+              icon={node.isOpen ? faFolderOpen : faFolder}
+            />
+          )}
+          {/* Node type icon for leaf nodes */}
+          {!node.data.hasChildren && !isProvider && getNodeIcon(node.data, node.isOpen)}
+          <Typography 
+            variant="body1" 
+            sx={{ fontWeight: isProvider ? 'bold' : 'normal' }}
+          >
+            {node.data.name}
+          </Typography>
+          {/* Info button */}
+          <IconButton size="small" sx={{ p: 0.25 }} onClick={handleInfoClick}>
+            <FontAwesomeIcon
+              size="xs"
+              fixedWidth
+              icon={faInfo}
             />
           </IconButton>
-        )}
-      </Stack>
+          {/* Action button for leaf nodes */}
+          {node.isLeaf && (
+            <IconButton size="small" color="primary" sx={{ p: 0.25 }}>
+              <FontAwesomeIcon
+                size="xs"
+                fixedWidth
+                icon={faRightToBracket}
+              />
+            </IconButton>
+          )}
+        </Stack>
+      </div>
     </div>
   );
 };
@@ -397,8 +644,17 @@ const RootDataLoader: FC<IRootDataLoaderProps> = ({
 function createTreeQueryManager(dataProviders: ITreeDataProvider[]) {
   const providerNames = dataProviders.map(provider => provider.name);
 
+  // Function to apply provider icons to nodes
+  const applyProviderIcons = (nodes: TreeNodeType[], provider: ITreeDataProvider): TreeNodeType[] => {
+    return nodes.map(node => ({
+      ...node,
+      icon: node.icon || provider.nodeTypeIcons?.[node.type],
+      children: node.children ? applyProviderIcons(node.children, provider) : node.children
+    }));
+  };
+
   // Function to fetch root nodes for a specific provider
-  const fetchRootNodesForProvider = (
+  const fetchRootNodesForProvider = async (
     providerName: string,
     sessionContext: SessionContext
   ): Promise<TreeNodeType[]> => {
@@ -406,7 +662,8 @@ function createTreeQueryManager(dataProviders: ITreeDataProvider[]) {
     if (!provider) {
       throw new Error(`Tree data provider '${providerName}' not found`);
     }
-    return provider.fetchRootNodes(sessionContext);
+    const nodes = await provider.fetchRootNodes(sessionContext);
+    return applyProviderIcons(nodes, provider);
   };
 
   // Function to load child nodes for a specific node
@@ -436,14 +693,16 @@ function createTreeQueryManager(dataProviders: ITreeDataProvider[]) {
       throw new Error(`No child loader found for node type '${node.type}'`);
     }
 
-    return await childLoader(node, sessionContext);
+    const childNodes = await childLoader(node, sessionContext);
+    return applyProviderIcons(childNodes, provider);
   };
 
   // Create initial tree structure with root nodes for each provider
   const initialTreeStructure = dataProviders.map(provider => ({
     id: `tree-root-${provider.name}`,
     name: provider.name,
-    type: 'ROOT' as const
+    type: 'ROOT' as const,
+    icon: provider.icon
   }));
 
   return {

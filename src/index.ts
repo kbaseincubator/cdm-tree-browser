@@ -51,8 +51,13 @@ const plugin: JupyterFrontEndPlugin<void> = {
     panel.id = 'cdm-tree-browser-panel';
     panel.title.closable = true;
     panel.title.icon = treeIcon;
-    panel.title.label = 'CDM Browser';
+    panel.title.label = '';
 
+    // Configure widget to fill available space
+    widget.addClass('jp-TreeBrowserWidget-root');
+    widget.node.style.height = '100%';
+    widget.node.style.overflow = 'hidden';
+    
     // Add the React widget to the panel
     panel.addWidget(widget);
 
