@@ -25,7 +25,7 @@ export const TreeBrowser: FC<ITreeBrowserProps> = ({ jupyterApp }) => {
   const containerRef = useRef<HTMLDivElement>(null);
   const containerDimensions = useTreeDimensions(containerRef);
   const { openNode, toggleInfo, closeInfo } = useInfoPanel();
-  
+
   // Initialize tree with root nodes for each configured provider
   const [treeData, setTreeData] = useState<TreeNodeType[]>(
     treeQueryManager.initialTreeStructure
@@ -42,7 +42,16 @@ export const TreeBrowser: FC<ITreeBrowserProps> = ({ jupyterApp }) => {
   );
 
   return (
-    <div ref={containerRef} className="jp-TreeBrowserWidget" style={{ position: 'relative', height: '100%', width: '100%', padding: '8px' }}>
+    <div
+      ref={containerRef}
+      className="jp-TreeBrowserWidget"
+      style={{
+        position: 'relative',
+        height: '100%',
+        width: '100%',
+        padding: '8px'
+      }}
+    >
       {/* Invisible component that manages data loading for all providers */}
       {sessionContext && (
         <TreeDataLoader
@@ -52,8 +61,8 @@ export const TreeBrowser: FC<ITreeBrowserProps> = ({ jupyterApp }) => {
         />
       )}
       {/* The actual tree UI component - takes full height */}
-      <Tree 
-        data={treeData} 
+      <Tree
+        data={treeData}
         openByDefault={false}
         width={containerDimensions.width}
         height={containerDimensions.height}
@@ -68,9 +77,9 @@ export const TreeBrowser: FC<ITreeBrowserProps> = ({ jupyterApp }) => {
           />
         )}
       </Tree>
-      
+
       {/* Fixed bottom panel for node info */}
-      <InfoPanel 
+      <InfoPanel
         openNode={openNode}
         sessionContext={sessionContext || null}
         onClose={closeInfo}

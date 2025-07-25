@@ -57,7 +57,7 @@ const plugin: JupyterFrontEndPlugin<void> = {
     widget.addClass('jp-TreeBrowserWidget-root');
     widget.node.style.height = '100%';
     widget.node.style.overflow = 'hidden';
-    
+
     // Add the React widget to the panel
     panel.addWidget(widget);
 
