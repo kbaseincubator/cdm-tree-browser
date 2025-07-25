@@ -1,0 +1,92 @@
+name: PR Prerelease
+
+on:
+  pull_request:
+    types: [opened, synchronize]
+    branches: [main]
+
+permissions:
+  contents: write
+  pull-requests: read
+  actions: read
+
+jobs:
+  build:
+    uses: ./.github/workflows/build.yml
+
+  prerelease:
+    needs: build
+    runs-on: ubuntu-latest
+    
+    steps:
+    - name: Checkout
+      uses: actions/checkout@v4
+
+    - name: Download extension artifacts
+      uses: actions/download-artifact@v4
+      with:
+        name: extension-artifacts
+        path: dist/
+
+    - name: Get package version
+      id: package_version
+      run: |
+        VERSION=$(python -c "import json; print(json.load(open('package.json'))['version'])")
+        echo "version=$VERSION" >> $GITHUB_OUTPUT
+        echo "prerelease_tag=v$VERSION-pr${{ github.event.number }}-${{ github.sha }}" >> $GITHUB_OUTPUT
+
+    - name: Create prerelease
+      id: create_release
+      uses: actions/create-release@v1
+      env:
+        GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+      with:
+        tag_name: ${{ steps.package_version.outputs.prerelease_tag }}
+        release_name: "Prerelease ${{ steps.package_version.outputs.prerelease_tag }}"
+        body: |
+          Prerelease for PR #${{ github.event.number }}
+          
+          **Changes in this PR:**
+          ${{ github.event.pull_request.title }}
+          
+          ## Installation
+          
+          Install this prerelease using:
+          ```bash
+          pip install https://github.com/${{ github.repository }}/releases/download/${{ steps.package_version.outputs.prerelease_tag }}/cdm_tree_browser-${{ steps.package_version.outputs.version }}-py3-none-any.whl
+          ```
+          
+          This is an automated prerelease created when the PR was opened.
+        draft: false
+        prerelease: true
+
+    - name: Upload wheel to release
+      uses: actions/upload-release-asset@v1
+      env:
+        GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+      with:
+        upload_url: ${{ steps.create_release.outputs.upload_url }}
+        asset_path: dist/cdm_tree_browser-${{ steps.package_version.outputs.version }}-py3-none-any.whl
+        asset_name: cdm_tree_browser-${{ steps.package_version.outputs.version }}-py3-none-any.whl
+        asset_content_type: application/zip
+
+    - name: Upload source distribution to release
+      uses: actions/upload-release-asset@v1
+      env:
+        GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+      with:
+        upload_url: ${{ steps.create_release.outputs.upload_url }}
+        asset_path: dist/cdm_tree_browser-${{ steps.package_version.outputs.version }}.tar.gz
+        asset_name: cdm_tree_browser-${{ steps.package_version.outputs.version }}.tar.gz
+        asset_content_type: application/gzip
+
+    - name: Comment on PR
+      uses: actions/github-script@v7
+      with:
+        script: |
+          github.rest.issues.createComment({
+            issue_number: context.issue.number,
+            owner: context.repo.owner,
+            repo: context.repo.repo,
+            body: `🚀 Prerelease created: [${{ steps.package_version.outputs.prerelease_tag }}](https://github.com/${{ github.repository }}/releases/tag/${{ steps.package_version.outputs.prerelease_tag }})`
+          })
