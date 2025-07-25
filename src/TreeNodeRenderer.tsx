@@ -5,11 +5,10 @@ import { NodeRendererProps } from 'react-arborist';
 import { IconButton, Stack, Typography } from '@mui/material';
 import { FontAwesomeIcon } from '@fortawesome/react-fontawesome';
 import {
-  faRightToBracket,
   faFile,
   faFolder,
   faFolderOpen,
-  faInfo
+  faCircleInfo
 } from '@fortawesome/free-solid-svg-icons';
 import { TreeNodeType, TreeNodeMutator } from './sharedTypes';
 import { treeQueryManager } from './treeQueryManager';
@@ -119,28 +118,20 @@ export const TreeNodeRenderer: FC<ITreeNodeRendererProps> = ({
             />
           )}
           {/* Node type icon for leaf nodes */}
-          {!node.data.hasChildren && !isProvider && getNodeIcon(node.data, node.isOpen)}
+          {!node.data.isParentNode && !isProvider && getNodeIcon(node.data, node.isOpen)}
           <Typography 
             variant="body1" 
             sx={{ fontWeight: isProvider ? 'bold' : 'normal' }}
           >
             {node.data.name}
           </Typography>
-          {/* Info button */}
-          <IconButton size="small" sx={{ p: 0.25 }} onClick={handleInfoClick}>
-            <FontAwesomeIcon
-              size="xs"
-              fixedWidth
-              icon={faInfo}
-            />
-          </IconButton>
-          {/* Action button for leaf nodes */}
-          {node.isLeaf && (
-            <IconButton size="small" color="primary" sx={{ p: 0.25 }}>
+          {/* Info button - only show if node has an info renderer */}
+          {node.data.infoRenderer && (
+            <IconButton size="small" sx={{ p: 0.25 }} onClick={handleInfoClick}>
               <FontAwesomeIcon
                 size="xs"
                 fixedWidth
-                icon={faRightToBracket}
+                icon={faCircleInfo}
               />
             </IconButton>
           )}

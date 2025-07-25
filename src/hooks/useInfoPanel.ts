@@ -1,36 +1,27 @@
 import { useState, useCallback } from 'react';
 import { TreeNodeType } from '../sharedTypes';
 
-interface InfoPanelState {
-  openNodeId: string | null;
-  openNode: TreeNodeType | null;
-}
-
 export function useInfoPanel() {
-  const [state, setState] = useState<InfoPanelState>({
-    openNodeId: null,
-    openNode: null
-  });
+  const [openNode, setOpenNode] = useState<TreeNodeType | null>(null);
 
   const toggleInfo = useCallback((nodeId: string, node: TreeNodeType) => {
-    setState(currentState => {
-      if (currentState.openNodeId === nodeId) {
+    setOpenNode(currentNode => {
+      if (currentNode?.id === nodeId) {
         // Close if clicking the same node
-        return { openNodeId: null, openNode: null };
+        return null;
       } else {
         // Open new node
-        return { openNodeId: nodeId, openNode: node };
+        return node;
       }
     });
   }, []);
 
   const closeInfo = useCallback(() => {
-    setState({ openNodeId: null, openNode: null });
+    setOpenNode(null);
   }, []);
 
   return {
-    openNodeId: state.openNodeId,
-    openNode: state.openNode,
+    openNode,
     toggleInfo,
     closeInfo
   };

@@ -4,7 +4,7 @@ import { useQuery } from '@tanstack/react-query';
 import { Typography } from '@mui/material';
 import { FontAwesomeIcon } from '@fortawesome/react-fontawesome';
 import { faDatabase, faTable } from '@fortawesome/free-solid-svg-icons';
-import { TreeNodeType, ITreeDataProvider } from '../sharedTypes';
+import { BaseTreeNodeType, TreeNodeType, ITreeDataProvider } from '../sharedTypes';
 import {
   parseKernelOutputJSON,
   queryKernel
@@ -24,7 +24,7 @@ type TableSchema = {
 };
 
 /** Displays table schema by calling get_table_schema mock function */
-const TableSchemaDisplay: FC<{ node: TreeNodeType; sessionContext: SessionContext | null }> = ({ node, sessionContext }) => {
+const TableSchemaDisplay: FC<{ node: TreeNodeType<'database' | 'table'>; sessionContext: SessionContext | null }> = ({ node, sessionContext }) => {
   const { data: schema, isLoading, error } = useQuery({
     queryKey: ['tableSchema', node.data?.database, node.name],
     queryFn: async () => {
@@ -59,9 +59,6 @@ const TableSchemaDisplay: FC<{ node: TreeNodeType; sessionContext: SessionContex
 
   return (
     <>
-      <Typography variant="h6" gutterBottom>
-        {schema.table}
-      </Typography>
       <Typography variant="body2" color="text.secondary" gutterBottom>
         Database: {schema.database}
       </Typography>
@@ -86,6 +83,7 @@ const TableSchemaDisplay: FC<{ node: TreeNodeType; sessionContext: SessionContex
 export const cdmProvider: ITreeDataProvider<'database' | 'table'> = {
   name: 'CDM Data Store',
   supportedNodeTypes: ['database', 'table'],
+  parentNodeTypes: ['database'],
   icon: <FontAwesomeIcon icon={faDatabase} />,
   nodeTypeIcons: {
     database: <FontAwesomeIcon icon={faDatabase} />,
@@ -118,21 +116,17 @@ export const cdmProvider: ITreeDataProvider<'database' | 'table'> = {
         id: databaseId,
         name: databaseId,
         type: 'database' as const,
-        hasContent: false,
-        hasChildren: true,
         children: tableNames.map(tableName => ({
           id: `${databaseId}//${tableName}`,
           name: tableName,
           type: 'table' as const,
-          hasContent: true,
-          hasChildren: false,
           data: { database: databaseId }
         }))
       })
     );
   },
   fetchChildNodes: {
-    table: async (node, sessionContext): Promise<TreeNodeType<'database' | 'table'>[]> => [] // Tables currently have no sub-children
+    table: async (node, sessionContext): Promise<BaseTreeNodeType<'database' | 'table'>[]> => [] // Tables currently have no sub-children
   }
 };
 

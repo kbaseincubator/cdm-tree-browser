@@ -1,5 +1,6 @@
+import React from 'react';
 import { SessionContext } from '@jupyterlab/apputils';
-import { TreeNodeType, ITreeDataProvider } from './sharedTypes';
+import { BaseTreeNodeType, TreeNodeType, ITreeDataProvider } from './sharedTypes';
 import dataProviders from './providers';
 
 /**
@@ -14,12 +15,14 @@ import dataProviders from './providers';
 function createTreeQueryManager(dataProviders: ITreeDataProvider[]) {
   const providerNames = dataProviders.map(provider => provider.name);
 
-  // Function to apply provider icons to nodes
-  const applyProviderIcons = (nodes: TreeNodeType[], provider: ITreeDataProvider): TreeNodeType[] => {
+  // Function to apply provider properties (icons, parent node status, and info renderers) to nodes
+  const applyProviderProperties = (nodes: BaseTreeNodeType[], provider: ITreeDataProvider): TreeNodeType[] => {
     return nodes.map(node => ({
       ...node,
-      icon: node.icon || provider.nodeTypeIcons?.[node.type],
-      children: node.children ? applyProviderIcons(node.children, provider) : node.children
+      icon: node.icon || provider.nodeTypeIcons?.[node.type] || React.createElement('span'), // Ensure icon is always present
+      isParentNode: provider.parentNodeTypes.includes(node.type),
+      infoRenderer: provider.nodeTypeInfoRenderers?.[node.type],
+      children: node.children ? applyProviderProperties(node.children, provider) : undefined
     }));
   };
 
@@ -33,7 +36,7 @@ function createTreeQueryManager(dataProviders: ITreeDataProvider[]) {
       throw new Error(`Tree data provider '${providerName}' not found`);
     }
     const nodes = await provider.fetchRootNodes(sessionContext);
-    return applyProviderIcons(nodes, provider);
+    return applyProviderProperties(nodes, provider);
   };
 
   // Function to load child nodes for a specific node
@@ -64,15 +67,16 @@ function createTreeQueryManager(dataProviders: ITreeDataProvider[]) {
     }
 
     const childNodes = await childLoader(node, sessionContext);
-    return applyProviderIcons(childNodes, provider);
+    return applyProviderProperties(childNodes, provider);
   };
 
   // Create initial tree structure with root nodes for each provider
-  const initialTreeStructure = dataProviders.map(provider => ({
+  const initialTreeStructure: TreeNodeType[] = dataProviders.map(provider => ({
     id: `tree-root-${provider.name}`,
     name: provider.name,
     type: 'ROOT' as const,
-    icon: provider.icon
+    icon: provider.icon || React.createElement('span'),
+    isParentNode: true // Root provider nodes are always parent nodes
   }));
 
   return {

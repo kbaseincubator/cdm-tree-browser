@@ -24,7 +24,7 @@ export const TreeBrowser: FC<ITreeBrowserProps> = ({ jupyterApp }) => {
   const sessionContext = useSessionContext(jupyterApp);
   const containerRef = useRef<HTMLDivElement>(null);
   const containerDimensions = useTreeDimensions(containerRef);
-  const { openNode, toggleInfo } = useInfoPanel();
+  const { openNode, toggleInfo, closeInfo } = useInfoPanel();
   
   // Initialize tree with root nodes for each configured provider
   const [treeData, setTreeData] = useState<TreeNodeType[]>(
@@ -72,8 +72,8 @@ export const TreeBrowser: FC<ITreeBrowserProps> = ({ jupyterApp }) => {
       {/* Fixed bottom panel for node info */}
       <InfoPanel 
         openNode={openNode}
-        treeData={treeData}
         sessionContext={sessionContext || null}
+        onClose={closeInfo}
       />
     </div>
   );

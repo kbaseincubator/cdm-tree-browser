@@ -1,57 +1,18 @@
 import React, { FC } from 'react';
 import { SessionContext } from '@jupyterlab/apputils';
-import { Collapse, Paper, Typography } from '@mui/material';
+import { Collapse, Paper, Typography, IconButton, Stack } from '@mui/material';
+import { FontAwesomeIcon } from '@fortawesome/react-fontawesome';
+import { faXmark } from '@fortawesome/free-solid-svg-icons';
 import { TreeNodeType } from './sharedTypes';
-import { treeQueryManager } from './treeQueryManager';
 
 interface InfoPanelProps {
   openNode: TreeNodeType | null;
-  treeData: TreeNodeType[];
   sessionContext: SessionContext | null;
+  onClose: () => void;
 }
 
-/** Function to get provider for a node */
-const getNodeProvider = (node: TreeNodeType, treeData: TreeNodeType[]) => {
-  const nodeLocation = findNodeInTree(node.id, treeData);
-  if (!nodeLocation) return undefined;
 
-  const { ancestors } = nodeLocation;
-  const providerName = ancestors[0]?.name || node.name;
-  return treeQueryManager.dataProviders.find(p => p.name === providerName);
-};
-
-/** Function to get the appropriate info renderer for a node */
-const getNodeInfoRenderer = (node: TreeNodeType, treeData: TreeNodeType[], sessionContext: SessionContext | null): React.ReactNode | undefined => {
-  const provider = getNodeProvider(node, treeData);
-  const renderer = provider?.nodeTypeInfoRenderers?.[node.type];
-  return renderer ? renderer(node, sessionContext) : undefined;
-};
-
-/** Helper function to find node in tree (copied from treeQueryManager for now) */
-function findNodeInTree(
-  nodeId: string,
-  treeData: TreeNodeType[],
-  ancestors: TreeNodeType[] = []
-): { node: TreeNodeType; ancestors: TreeNodeType[] } | undefined {
-  for (const currentNode of treeData) {
-    if (currentNode.id === nodeId) {
-      return { node: currentNode, ancestors };
-    }
-
-    if (currentNode.children) {
-      const result = findNodeInTree(nodeId, currentNode.children, [
-        ...ancestors,
-        currentNode
-      ]);
-      if (result) {
-        return result;
-      }
-    }
-  }
-  return undefined;
-}
-
-export const InfoPanel: FC<InfoPanelProps> = ({ openNode, treeData, sessionContext }) => {
+export const InfoPanel: FC<InfoPanelProps> = ({ openNode, sessionContext, onClose }) => {
   return (
     <Collapse in={openNode !== null}>
       <Paper sx={{ 
@@ -67,11 +28,26 @@ export const InfoPanel: FC<InfoPanelProps> = ({ openNode, treeData, sessionConte
       }}>
         {openNode && (
           <>
-            {getNodeInfoRenderer(openNode, treeData, sessionContext) || (
-              <>
-                <Typography variant="h6" gutterBottom>
+            {/* Header with close button */}
+            <Stack direction="row" justifyContent="space-between" alignItems="flex-start" sx={{ mb: 2 }}>
+              <Stack direction="row" alignItems="center" spacing={1} sx={{ flexGrow: 1 }}>
+                {openNode.icon && (
+                  <span style={{ fontSize: '1.1em' }}>
+                    {openNode.icon}
+                  </span>
+                )}
+                <Typography variant="h6">
                   {openNode.name}
                 </Typography>
+              </Stack>
+              <IconButton size="small" onClick={onClose} sx={{ ml: 1 }}>
+                <FontAwesomeIcon icon={faXmark} />
+              </IconButton>
+            </Stack>
+            
+            {/* Content */}
+            {openNode.infoRenderer?.(openNode, sessionContext) || (
+              <>
                 <Typography variant="body2" color="text.secondary" gutterBottom>
                   Type: {openNode.type}
                 </Typography>
