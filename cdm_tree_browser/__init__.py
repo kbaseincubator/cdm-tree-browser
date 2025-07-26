@@ -14,3 +14,7 @@ def _jupyter_labextension_paths():
         "src": "labextension",
         "dest": "cdm-tree-browser"
     }]
+
+
+# Import and expose the setup function
+from .cdm_methods import get_cdm_methods
