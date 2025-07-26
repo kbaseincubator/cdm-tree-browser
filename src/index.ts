@@ -22,12 +22,11 @@ const treeIcon = new LabIcon({
  */
 const plugin: JupyterFrontEndPlugin<void> = {
   id: 'cdm-tree-browser:plugin',
-  description: 'A JupyterLab extension for browsing file/data trees in KBase CDM JupyterLab.',
+  description:
+    'A JupyterLab extension for browsing file/data trees in KBase CDM JupyterLab.',
   autoStart: true,
   requires: [ILayoutRestorer],
   activate: (app: JupyterFrontEnd, restorer: ILayoutRestorer) => {
-    console.log('JupyterLab extension cdm-tree-browser is activated!');
-
     // Create QueryClient for React Query
     const queryClient = new QueryClient({
       defaultOptions: {

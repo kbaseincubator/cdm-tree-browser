@@ -1,6 +1,10 @@
 import React from 'react';
 import { SessionContext } from '@jupyterlab/apputils';
-import { BaseTreeNodeType, TreeNodeType, ITreeDataProvider } from './sharedTypes';
+import {
+  BaseTreeNodeType,
+  TreeNodeType,
+  ITreeDataProvider
+} from './sharedTypes';
 import dataProviders from './providers';
 
 /**
@@ -16,13 +20,21 @@ function createTreeQueryManager(dataProviders: ITreeDataProvider[]) {
   const providerNames = dataProviders.map(provider => provider.name);
 
   // Function to apply provider properties (icons, parent node status, and info renderers) to nodes
-  const applyProviderProperties = (nodes: BaseTreeNodeType[], provider: ITreeDataProvider): TreeNodeType[] => {
+  const applyProviderProperties = (
+    nodes: BaseTreeNodeType[],
+    provider: ITreeDataProvider
+  ): TreeNodeType[] => {
     return nodes.map(node => ({
       ...node,
-      icon: node.icon || provider.nodeTypeIcons?.[node.type] || React.createElement('span'), // Ensure icon is always present
+      icon:
+        node.icon ||
+        provider.nodeTypeIcons?.[node.type] ||
+        React.createElement('span'), // Ensure icon is always present
       isParentNode: provider.parentNodeTypes.includes(node.type),
       infoRenderer: provider.nodeTypeInfoRenderers?.[node.type],
-      children: node.children ? applyProviderProperties(node.children, provider) : undefined
+      children: node.children
+        ? applyProviderProperties(node.children, provider)
+        : undefined
     }));
   };
 
@@ -140,7 +152,11 @@ export function updateNodeInTree(
 
     // Recursively update in children if they exist
     if (node.children) {
-      const updatedChildren = updateNodeInTree(node.children, nodeId, updatedNode);
+      const updatedChildren = updateNodeInTree(
+        node.children,
+        nodeId,
+        updatedNode
+      );
       // Only create new object if children actually changed
       if (updatedChildren !== node.children) {
         return {

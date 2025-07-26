@@ -21,7 +21,10 @@ interface ITreeBrowserProps {
  * This is the primary component that manages the tree state and renders the tree UI.
  * It automatically handles all configured data providers and their loading states.
  */
-export const TreeBrowser: FC<ITreeBrowserProps> = ({ jupyterApp, restorer }) => {
+export const TreeBrowser: FC<ITreeBrowserProps> = ({
+  jupyterApp,
+  restorer
+}) => {
   const sessionContext = useSessionContext(jupyterApp);
   const containerRef = useRef<HTMLDivElement>(null);
   const treeRef = useRef<TreeApi<TreeNodeType>>(null);
@@ -52,7 +55,6 @@ export const TreeBrowser: FC<ITreeBrowserProps> = ({ jupyterApp, restorer }) => 
     }
   }, []);
 
-
   // Update open state tracking when user interacts with tree
   const handleTreeStateChange = useCallback(() => {
     setHasUserInteracted(true);
@@ -61,7 +63,10 @@ export const TreeBrowser: FC<ITreeBrowserProps> = ({ jupyterApp, restorer }) => 
         .filter(node => node.isOpen)
         .map(node => node.id);
       setOpenNodeIds(currentOpenIds);
-      localStorage.setItem('cdm-tree-browser-open-nodes', JSON.stringify(currentOpenIds));
+      localStorage.setItem(
+        'cdm-tree-browser-open-nodes',
+        JSON.stringify(currentOpenIds)
+      );
     }
   }, []);
 

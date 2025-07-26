@@ -26,13 +26,19 @@ export type BaseTreeNodeType<T extends string = string, D = any> = {
  * This is what components receive after provider properties are applied
  * @template T - Union type of supported node types (e.g., 'database' | 'table')
  */
-export type TreeNodeType<T extends string = string, D = any> = BaseTreeNodeType<T, D> & {
+export type TreeNodeType<T extends string = string, D = any> = BaseTreeNodeType<
+  T,
+  D
+> & {
   /** Custom icon to display for this node - always present after provider processing */
   icon: React.ReactNode;
   /** Whether this is a parent node - applied automatically based on provider configuration */
   isParentNode: boolean;
   /** Info renderer function - applied from provider configuration */
-  infoRenderer?: (node: TreeNodeType<T, D>, sessionContext: SessionContext | null) => React.ReactNode;
+  infoRenderer?: (
+    node: TreeNodeType<T, D>,
+    sessionContext: SessionContext | null
+  ) => React.ReactNode;
   /** Child nodes with provider properties applied */
   children?: TreeNodeType<T, D>[];
 };
@@ -50,7 +56,9 @@ export interface ITreeDataProvider<T extends string = string> {
   /** Array of node types that are parent nodes (can have children) */
   parentNodeTypes: T[];
   /** Function to fetch the root-level nodes for this provider */
-  fetchRootNodes: (sessionContext: SessionContext) => Promise<BaseTreeNodeType<T>[]>;
+  fetchRootNodes: (
+    sessionContext: SessionContext
+  ) => Promise<BaseTreeNodeType<T>[]>;
   /** Map of node type to child fetching function */
   fetchChildNodes: {
     [K in T]?: (
@@ -66,7 +74,10 @@ export interface ITreeDataProvider<T extends string = string> {
   };
   /** Custom info panel renderers by node type - receives sessionContext for API calls */
   nodeTypeInfoRenderers?: {
-    [K in T]?: (node: TreeNodeType<T>, sessionContext: SessionContext | null) => React.ReactNode;
+    [K in T]?: (
+      node: TreeNodeType<T>,
+      sessionContext: SessionContext | null
+    ) => React.ReactNode;
   };
 }
 

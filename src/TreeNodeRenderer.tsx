@@ -31,7 +31,7 @@ const getNodeIcon = (node: TreeNodeType, isOpen?: boolean): React.ReactNode => {
   if (node.icon) {
     return node.icon;
   }
-  
+
   // Default to file icon for nodes without custom icons
   return <FontAwesomeIcon icon={faFile} />;
 };
@@ -54,11 +54,13 @@ export const TreeNodeRenderer: FC<ITreeNodeRendererProps> = ({
   onToggle,
   restoreOpenNodeIds
 }) => {
-  
   // Determine if we need to load children (parent is open but children not loaded)
   // Only load children for nodes that are configured as parent nodes in the provider, excluding ROOT nodes
   const shouldLoadChildren =
-    node.parent?.isOpen && node.data.children === undefined && node.data.isParentNode && node.data.type !== 'ROOT';
+    node.parent?.isOpen &&
+    node.data.children === undefined &&
+    node.data.isParentNode &&
+    node.data.type !== 'ROOT';
 
   // Query to fetch child nodes when needed
   const childNodesQuery = useQuery({
@@ -97,10 +99,9 @@ export const TreeNodeRenderer: FC<ITreeNodeRendererProps> = ({
 
   // Auto-restore previously open node state for lazy-loaded nodes
   useEffect(() => {
-    const shouldRestore = restoreOpenNodeIds.includes(node.id) && 
-                         !node.isOpen && 
-                         !node.isLeaf;
-    
+    const shouldRestore =
+      restoreOpenNodeIds.includes(node.id) && !node.isOpen && !node.isLeaf;
+
     if (shouldRestore) {
       const treeNode = tree.get(node.id);
       if (treeNode) {
@@ -133,41 +134,56 @@ export const TreeNodeRenderer: FC<ITreeNodeRendererProps> = ({
   return (
     <div style={style} ref={dragHandle}>
       <div onClick={handleNodeClick}>
-        <Stack direction="row" spacing={0.5} alignItems="center">
+        <Stack
+          direction="row"
+          spacing={0}
+          alignItems="center"
+          justifyItems="start"
+        >
           {/* Provider icon (larger, no folder) */}
           {isProvider && (
-            <span style={{ fontSize: '1.2em' }}>
+            <IconButton size="small">
               {!node.data.children ? (
                 <FontAwesomeIcon icon={faSpinner} spin />
               ) : (
                 node.data.icon
               )}
-            </span>
+            </IconButton>
           )}
           {/* Expand/collapse icon for non-provider parent nodes */}
           {!node.isLeaf && !isProvider && (
-            <FontAwesomeIcon
-              fixedWidth
-              icon={childNodesQuery.isLoading ? faSpinner : (node.isOpen ? faFolderOpen : faFolder)}
-              spin={childNodesQuery.isLoading}
-            />
+            <IconButton size="small">
+              <FontAwesomeIcon
+                fixedWidth
+                size="sm"
+                icon={
+                  childNodesQuery.isLoading
+                    ? faSpinner
+                    : node.isOpen
+                      ? faFolderOpen
+                      : faFolder
+                }
+                spin={childNodesQuery.isLoading}
+              />
+            </IconButton>
           )}
           {/* Node type icon for leaf nodes */}
-          {!node.data.isParentNode && !isProvider && getNodeIcon(node.data, node.isOpen)}
-          <Typography 
-            variant="body1" 
+          {!node.data.isParentNode && !isProvider && (
+            <IconButton size="small">
+              {getNodeIcon(node.data, node.isOpen)}
+            </IconButton>
+          )}
+          <Typography
+            variant="body2"
             sx={{ fontWeight: isProvider ? 'bold' : 'normal' }}
+            height="1.2em"
           >
             {node.data.name}
           </Typography>
           {/* Info button - only show if node has an info renderer */}
           {node.data.infoRenderer && (
-            <IconButton size="small" sx={{ p: 0.25 }} onClick={handleInfoClick}>
-              <FontAwesomeIcon
-                size="xs"
-                fixedWidth
-                icon={faCircleInfo}
-              />
+            <IconButton size="small" onClick={handleInfoClick}>
+              <FontAwesomeIcon size="xs" icon={faCircleInfo} />
             </IconButton>
           )}
         </Stack>
