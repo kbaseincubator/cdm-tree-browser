@@ -7,6 +7,7 @@ import { TreeNodeType, TreeNodeMutator } from '../sharedTypes';
 import { treeQueryManager, updateNodeInTree } from '../treeQueryManager';
 import { useTreeDimensions } from '../hooks/useTreeDimensions';
 import { useInfoPanel } from '../hooks/useInfoPanel';
+import { useMockNotification } from '../hooks/useMockNotification';
 import { TreeDataLoader } from '../TreeDataLoader';
 import { TreeNodeRenderer } from '../TreeNodeRenderer';
 import { InfoPanel } from '../InfoPanel';
@@ -34,6 +35,9 @@ export const TreeBrowser: FC<ITreeBrowserProps> = ({
   const treeRef = useRef<TreeApi<TreeNodeType>>(null);
   const containerDimensions = useTreeDimensions(containerRef);
   const { openNode, toggleInfo, closeInfo } = useInfoPanel();
+  
+  // Check if mocks are active and show notification
+  useMockNotification(sessionContext);
 
   // Initialize tree with root nodes for each configured provider
   const [treeData, setTreeData] = useState<TreeNodeType[]>(
