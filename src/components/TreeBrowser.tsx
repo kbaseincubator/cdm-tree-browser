@@ -1,5 +1,6 @@
 import React, { useState, FC, useCallback, useRef, useEffect } from 'react';
 import { JupyterFrontEnd, ILayoutRestorer } from '@jupyterlab/application';
+import { IStateDB } from '@jupyterlab/statedb';
 import { Tree, TreeApi } from 'react-arborist';
 import { useSessionContext } from './kernelCommunication';
 import { TreeNodeType, TreeNodeMutator } from '../sharedTypes';
@@ -13,6 +14,7 @@ import { InfoPanel } from '../InfoPanel';
 interface ITreeBrowserProps {
   jupyterApp: JupyterFrontEnd;
   restorer: ILayoutRestorer;
+  stateDB: IStateDB;
 }
 
 /**
@@ -23,7 +25,8 @@ interface ITreeBrowserProps {
  */
 export const TreeBrowser: FC<ITreeBrowserProps> = ({
   jupyterApp,
-  restorer
+  restorer,
+  stateDB
 }) => {
   const sessionContext = useSessionContext(jupyterApp);
   const containerRef = useRef<HTMLDivElement>(null);
@@ -42,33 +45,37 @@ export const TreeBrowser: FC<ITreeBrowserProps> = ({
 
   // Restore saved open node state on mount
   useEffect(() => {
-    try {
-      const savedState = localStorage.getItem('cdm-tree-browser-open-nodes');
-      if (savedState) {
-        const parsedState = JSON.parse(savedState);
-        if (Array.isArray(parsedState)) {
-          setOpenNodeIds(parsedState);
+    const restoreTreeState = async () => {
+      try {
+        await jupyterApp.restored;
+        const savedState = await stateDB.fetch('cdm-tree-browser:open-nodes');
+        if (savedState && Array.isArray(savedState)) {
+          setOpenNodeIds(savedState);
         }
+      } catch (error) {
+        console.warn('Failed to restore tree state:', error);
       }
-    } catch (error) {
-      console.warn('Failed to restore tree state:', error);
-    }
-  }, []);
+    };
+
+    restoreTreeState();
+  }, [jupyterApp, stateDB]);
 
   // Update open state tracking when user interacts with tree
-  const handleTreeStateChange = useCallback(() => {
+  const handleTreeStateChange = useCallback(async () => {
     setHasUserInteracted(true);
     if (treeRef.current) {
       const currentOpenIds = treeRef.current.visibleNodes
         .filter(node => node.isOpen)
         .map(node => node.id);
       setOpenNodeIds(currentOpenIds);
-      localStorage.setItem(
-        'cdm-tree-browser-open-nodes',
-        JSON.stringify(currentOpenIds)
-      );
+
+      try {
+        await stateDB.save('cdm-tree-browser:open-nodes', currentOpenIds);
+      } catch (error) {
+        console.warn('Failed to save tree state:', error);
+      }
     }
-  }, []);
+  }, [stateDB]);
 
   // Callback to update individual nodes in the tree structure
   const handleNodeUpdate = useCallback<TreeNodeMutator>(
