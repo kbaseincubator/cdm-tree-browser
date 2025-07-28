@@ -10,6 +10,7 @@ import { useInfoPanel } from '../hooks/useInfoPanel';
 import { TreeDataLoader } from '../TreeDataLoader';
 import { TreeNodeRenderer } from '../TreeNodeRenderer';
 import { InfoPanel } from '../InfoPanel';
+import { showError } from '../utils/errorUtil';
 
 interface ITreeBrowserProps {
   jupyterApp: JupyterFrontEnd;
@@ -28,7 +29,7 @@ export const TreeBrowser: FC<ITreeBrowserProps> = ({
   restorer,
   stateDB
 }) => {
-  const sessionContext = useSessionContext(jupyterApp);
+  const { sessionContext, error: sessionError } = useSessionContext(jupyterApp);
   const containerRef = useRef<HTMLDivElement>(null);
   const treeRef = useRef<TreeApi<TreeNodeType>>(null);
   const containerDimensions = useTreeDimensions(containerRef);
@@ -42,6 +43,13 @@ export const TreeBrowser: FC<ITreeBrowserProps> = ({
   // State for tree node restoration
   const [openNodeIds, setOpenNodeIds] = useState<string[]>([]);
   const [hasUserInteracted, setHasUserInteracted] = useState(false);
+
+  // Show session errors to user
+  useEffect(() => {
+    if (sessionError) {
+      showError(sessionError, 'Failed to connect to Jupyter kernel');
+    }
+  }, [sessionError]);
 
   // Restore saved open node state on mount
   useEffect(() => {

@@ -13,6 +13,7 @@ import {
 } from '@fortawesome/free-solid-svg-icons';
 import { TreeNodeType, TreeNodeMutator } from './sharedTypes';
 import { treeQueryManager } from './treeQueryManager';
+import { showErrorWithRetry } from './utils/errorUtil';
 
 /** Props for the TreeNodeRenderer component */
 interface ITreeNodeRendererProps extends NodeRendererProps<TreeNodeType> {
@@ -80,12 +81,13 @@ export const TreeNodeRenderer: FC<ITreeNodeRendererProps> = ({
   // Handle loading errors
   useEffect(() => {
     if (childNodesQuery.error) {
-      console.error(
-        `Failed to load children for node '${node.id}':`,
-        childNodesQuery.error
+      showErrorWithRetry(
+        childNodesQuery.error,
+        `Failed to load children for ${node.name}`,
+        () => childNodesQuery.refetch()
       );
     }
-  }, [childNodesQuery.error, node.id]);
+  }, [childNodesQuery.error, node.id, node.name, childNodesQuery.refetch]);
 
   // Update tree when child data is loaded
   useEffect(() => {

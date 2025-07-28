@@ -3,6 +3,7 @@ import { SessionContext } from '@jupyterlab/apputils';
 import { useQuery } from '@tanstack/react-query';
 import { TreeNodeType, TreeNodeMutator } from './sharedTypes';
 import { treeQueryManager } from './treeQueryManager';
+import { showErrorWithRetry } from './utils/errorUtil';
 
 interface ITreeDataLoaderProps {
   treeData: TreeNodeType[];
@@ -77,9 +78,10 @@ const RootDataLoader: FC<IRootDataLoaderProps> = ({
     }
 
     if (rootNodesQuery.error) {
-      console.error(
-        `Failed to load root nodes for provider '${providerName}':`,
-        rootNodesQuery.error
+      showErrorWithRetry(
+        rootNodesQuery.error,
+        `Failed to load ${providerName} data`,
+        () => rootNodesQuery.refetch()
       );
     }
 
