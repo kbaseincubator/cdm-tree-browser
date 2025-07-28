@@ -1,4 +1,4 @@
-import React, { useState, FC, useCallback, useRef, useEffect } from 'react';
+import React, { useState, FC, useCallback, useRef, useEffect, useMemo } from 'react';
 import { JupyterFrontEnd, ILayoutRestorer } from '@jupyterlab/application';
 import { IStateDB } from '@jupyterlab/statedb';
 import { Tree, TreeApi } from 'react-arborist';
@@ -12,6 +12,10 @@ import { TreeDataLoader } from '../TreeDataLoader';
 import { TreeNodeRenderer } from '../TreeNodeRenderer';
 import { InfoPanel } from '../InfoPanel';
 import { showError } from '../utils/errorUtil';
+import { debounce } from '../utils/debounce';
+
+const STATE_KEY_OPEN_NODES = 'cdm-tree-browser:open-nodes';
+const DEBOUNCE_DELAY_MS = 500;
 
 interface ITreeBrowserProps {
   jupyterApp: JupyterFrontEnd;
@@ -60,7 +64,7 @@ export const TreeBrowser: FC<ITreeBrowserProps> = ({
     const restoreTreeState = async () => {
       try {
         await jupyterApp.restored;
-        const savedState = await stateDB.fetch('cdm-tree-browser:open-nodes');
+        const savedState = await stateDB.fetch(STATE_KEY_OPEN_NODES);
         if (savedState && Array.isArray(savedState)) {
           setOpenNodeIds(savedState);
         }
@@ -72,22 +76,29 @@ export const TreeBrowser: FC<ITreeBrowserProps> = ({
     restoreTreeState();
   }, [jupyterApp, stateDB]);
 
+  // Debounced state save function
+  const debouncedStateSave = useMemo(
+    () => debounce(async (openIds: string[]) => {
+      try {
+        await stateDB.save(STATE_KEY_OPEN_NODES, openIds);
+      } catch (error) {
+        console.warn('Failed to save tree state:', error);
+      }
+    }, DEBOUNCE_DELAY_MS),
+    [stateDB]
+  );
+
   // Update open state tracking when user interacts with tree
-  const handleTreeStateChange = useCallback(async () => {
+  const handleTreeStateChange = useCallback(() => {
     setHasUserInteracted(true);
     if (treeRef.current) {
       const currentOpenIds = treeRef.current.visibleNodes
         .filter(node => node.isOpen)
         .map(node => node.id);
       setOpenNodeIds(currentOpenIds);
-
-      try {
-        await stateDB.save('cdm-tree-browser:open-nodes', currentOpenIds);
-      } catch (error) {
-        console.warn('Failed to save tree state:', error);
-      }
+      debouncedStateSave(currentOpenIds);
     }
-  }, [stateDB]);
+  }, [debouncedStateSave]);
 
   // Callback to update individual nodes in the tree structure
   const handleNodeUpdate = useCallback<TreeNodeMutator>(

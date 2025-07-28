@@ -9,6 +9,8 @@ import { useEffect, useState } from 'react';
 import { Kernel, KernelMessage } from '@jupyterlab/services';
 import { IOutput } from '@jupyterlab/nbformat';
 
+const SESSION_NAME = 'cdm-tree-browser';
+
 export class KernelError extends Error {
   public readonly traceback?: string[];
   public readonly ename?: string;
@@ -35,7 +37,7 @@ export const useSessionContext = (app: JupyterFrontEnd) => {
     const sessionContext = new SessionContext({
       sessionManager: manager.sessions,
       specsManager: manager.kernelspecs,
-      name: 'cdm-tree-browser'
+      name: SESSION_NAME
     });
     void sessionContext
       .initialize()

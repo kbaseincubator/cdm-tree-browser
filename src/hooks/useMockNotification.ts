@@ -18,7 +18,7 @@ export function useMockNotification(sessionContext: SessionContext | null) {
         );
 
         if (error) {
-          console.warn('Failed to check mock usage:', error);
+          console.error('Failed to check mock usage:', error);
           return;
         }
 
@@ -26,7 +26,7 @@ export function useMockNotification(sessionContext: SessionContext | null) {
           showSuccess('CDM Tree Browser is using mock data');
         }
       } catch (error) {
-        console.warn('Error checking mock usage:', error);
+        console.error('Error checking mock usage:', error);
       }
     };
 

@@ -13,8 +13,13 @@ import { QueryClient, QueryClientProvider } from '@tanstack/react-query';
 import { TreeBrowser } from './components/TreeBrowser';
 import treeIconSvg from '@fortawesome/fontawesome-free/svgs/solid/sitemap.svg';
 
+const EXTENSION_ID = 'cdm-tree-browser';
+const PLUGIN_ID = `${EXTENSION_ID}:plugin`;
+const TREE_ICON_ID = `${EXTENSION_ID}:tree-icon`;
+const PANEL_ID = `${EXTENSION_ID}-panel`;
+
 const treeIcon = new LabIcon({
-  name: 'cdm-tree-browser:tree-icon',
+  name: TREE_ICON_ID,
   svgstr: treeIconSvg
 });
 
@@ -22,7 +27,7 @@ const treeIcon = new LabIcon({
  * CDM Tree Browser JupyterLab extension plugin
  */
 const plugin: JupyterFrontEndPlugin<void> = {
-  id: 'cdm-tree-browser:plugin',
+  id: PLUGIN_ID,
   description:
     'A JupyterLab extension for browsing file/data trees in KBase CDM JupyterLab.',
   autoStart: true,
@@ -53,7 +58,7 @@ const plugin: JupyterFrontEndPlugin<void> = {
 
     // Create sidebar panel
     const panel = new Panel();
-    panel.id = 'cdm-tree-browser-panel';
+    panel.id = PANEL_ID;
     panel.title.closable = true;
     panel.title.icon = treeIcon;
     panel.title.label = '';
@@ -66,7 +71,7 @@ const plugin: JupyterFrontEndPlugin<void> = {
     // Assemble and register panel
     panel.addWidget(widget);
     app.shell.add(panel, 'left', { rank: 1 });
-    restorer.add(panel, 'cdm-tree-browser-panel');
+    restorer.add(panel, PANEL_ID);
   }
 };
 
