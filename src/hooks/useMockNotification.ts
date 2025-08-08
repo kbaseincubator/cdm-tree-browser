@@ -6,11 +6,15 @@ import { queryKernel } from '../components/kernelCommunication';
 /**
  * Hook to check if CDM methods are using mocks and show a success notification
  */
-export function useMockNotification(sessionContext: SessionContext | null | undefined) {
+export function useMockNotification(
+  sessionContext: SessionContext | null | undefined
+) {
   useEffect(() => {
     const checkMockUsage = async () => {
-      if (!sessionContext) return;
-      
+      if (!sessionContext) {
+        return;
+      }
+
       try {
         const { data, error } = await queryKernel(
           'import cdm_tree_browser; get_db_structure, get_table_schema, using_mocks = cdm_tree_browser.get_cdm_methods(); using_mocks',
@@ -22,7 +26,12 @@ export function useMockNotification(sessionContext: SessionContext | null | unde
           return;
         }
 
-        if (data?.data && typeof data.data === 'object' && data.data !== null && 'text/plain' in data.data) {
+        if (
+          data?.data &&
+          typeof data.data === 'object' &&
+          data.data !== null &&
+          'text/plain' in data.data
+        ) {
           const textOutput = data.data['text/plain'] as string;
           if (textOutput && textOutput.trim() === 'True') {
             showSuccess('CDM Tree Browser is using mock data');

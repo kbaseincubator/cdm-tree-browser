@@ -1,6 +1,7 @@
 import { useState, useCallback } from 'react';
 import { TreeNodeType } from '../sharedTypes';
 
+/** Manages info panel state for displaying node details */
 export function useInfoPanel() {
   const [openNode, setOpenNode] = useState<TreeNodeType | null>(null);
 

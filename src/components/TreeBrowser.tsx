@@ -1,4 +1,11 @@
-import React, { useState, FC, useCallback, useRef, useEffect, useMemo } from 'react';
+import React, {
+  useState,
+  FC,
+  useCallback,
+  useRef,
+  useEffect,
+  useMemo
+} from 'react';
 import { JupyterFrontEnd, ILayoutRestorer } from '@jupyterlab/application';
 import { IStateDB } from '@jupyterlab/statedb';
 import { Tree, TreeApi } from 'react-arborist';
@@ -39,7 +46,7 @@ export const TreeBrowser: FC<ITreeBrowserProps> = ({
   const treeRef = useRef<TreeApi<TreeNodeType>>(null);
   const containerDimensions = useTreeDimensions(containerRef);
   const { openNode, toggleInfo, closeInfo } = useInfoPanel();
-  
+
   // Check if mocks are active and show notification
   useMockNotification(sessionContext);
 
@@ -78,13 +85,14 @@ export const TreeBrowser: FC<ITreeBrowserProps> = ({
 
   // Debounced state save function
   const debouncedStateSave = useMemo(
-    () => debounce(async (openIds: string[]) => {
-      try {
-        await stateDB.save(STATE_KEY_OPEN_NODES, openIds);
-      } catch (error) {
-        console.warn('Failed to save tree state:', error);
-      }
-    }, DEBOUNCE_DELAY_MS),
+    () =>
+      debounce(async (openIds: string[]) => {
+        try {
+          await stateDB.save(STATE_KEY_OPEN_NODES, openIds);
+        } catch (error) {
+          console.warn('Failed to save tree state:', error);
+        }
+      }, DEBOUNCE_DELAY_MS),
     [stateDB]
   );
 

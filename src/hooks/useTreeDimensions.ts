@@ -5,6 +5,7 @@ interface ITreeDimensions {
   height: number;
 }
 
+/** Tracks container dimensions for responsive tree rendering */
 export function useTreeDimensions(containerRef: RefObject<HTMLDivElement>) {
   const [containerDimensions, setContainerDimensions] =
     useState<ITreeDimensions>({

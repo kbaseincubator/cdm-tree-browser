@@ -1,7 +1,10 @@
 /**
  * Simple debounce utility function
  */
-export function debounce<T extends (...args: any[]) => void>(func: T, delay: number): T {
+export function debounce<T extends (...args: any[]) => void>(
+  func: T,
+  delay: number
+): T {
   let timeoutId: ReturnType<typeof setTimeout>;
   return ((...args: any[]) => {
     clearTimeout(timeoutId);

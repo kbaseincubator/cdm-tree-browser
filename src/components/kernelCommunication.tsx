@@ -28,7 +28,7 @@ export class KernelError extends Error {
   }
 }
 
-// Creates and initializes a sessionContext for use with a kernel
+/** Creates and initializes a sessionContext for use with a kernel */
 export const useSessionContext = (app: JupyterFrontEnd) => {
   const [sc, setSc] = useState<SessionContext | undefined>();
   const [error, setError] = useState<Error | undefined>();
@@ -50,7 +50,9 @@ export const useSessionContext = (app: JupyterFrontEnd) => {
         }
       })
       .catch(reason => {
-        const sessionError = new Error(`Failed to initialize the session: ${reason}`);
+        const sessionError = new Error(
+          `Failed to initialize the session: ${reason}`
+        );
         setError(sessionError);
         console.error('Failed to initialize the session:', reason);
       });
@@ -63,7 +65,7 @@ export const useSessionContext = (app: JupyterFrontEnd) => {
   return { sessionContext: sc, error };
 };
 
-// Executes a kernel query in a given sessionContext
+/** Executes a kernel query in a given sessionContext */
 export const queryKernel = async (
   code: string,
   sessionContext: SessionContext
