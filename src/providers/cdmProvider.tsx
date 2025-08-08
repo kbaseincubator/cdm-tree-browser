@@ -14,18 +14,8 @@ import {
   queryKernel
 } from '../components/kernelCommunication';
 
-/** Schema structure returned by get_table_schema mock function */
-type TableSchema = {
-  database: string;
-  table: string;
-  columns: Array<{
-    name: string;
-    type: string;
-    nullable?: boolean;
-    primary_key?: boolean;
-    foreign_key?: string;
-  }>;
-};
+/** Schema structure returned by get_table_schema function - simple array of column names */
+type TableSchema = string[];
 
 /** Displays table schema by calling get_table_schema mock function */
 const TableSchemaDisplay: FC<{
@@ -82,29 +72,29 @@ const TableSchemaDisplay: FC<{
   return (
     <>
       <Typography variant="body2" color="text.secondary" gutterBottom>
-        Database: {schema.database}
+        Database: {node.data?.database}
       </Typography>
       <Typography variant="body2" gutterBottom>
-        Columns ({schema.columns?.length || 0}):
+        Columns ({schema.length || 0}):
       </Typography>
-      {schema.columns
+      {schema
         ?.slice(0, showAllColumns ? undefined : 5)
-        .map((col: any, idx: number) => (
+        .map((columnName: string, idx: number) => (
           <Typography key={idx} variant="body2" component="div" sx={{ ml: 2 }}>
-            • {col.name} ({col.type})
+            • {columnName}
           </Typography>
         ))}
-      {schema.columns?.length > 5 && !showAllColumns && (
+      {schema.length > 5 && !showAllColumns && (
         <Button
           variant="text"
           size="small"
           onClick={() => setShowAllColumns(true)}
           sx={{ ml: 2, p: 0, minWidth: 'auto', textTransform: 'none' }}
         >
-          ... and {schema.columns.length - 5} more columns
+          ... and {schema.length - 5} more columns
         </Button>
       )}
-      {showAllColumns && schema.columns?.length > 5 && (
+      {showAllColumns && schema.length > 5 && (
         <Button
           variant="text"
           size="small"

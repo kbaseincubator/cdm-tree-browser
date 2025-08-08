@@ -123,6 +123,7 @@ def get_db_structure(with_schema=True, return_json=False):
 def get_table_schema(database_name, table_name, return_json=False):
     """
     Mock function to get table schema information
+    Returns list of column names to match actual kernel function behavior.
     
     Args:
         database_name (str): Name of the database
@@ -130,26 +131,23 @@ def get_table_schema(database_name, table_name, return_json=False):
         return_json (bool): Whether to return JSON string
     
     Returns:
-        dict or str: Table schema with columns and types
+        list or str: List of column names
     """
-    schema = {
-        "database": database_name,
-        "table": table_name,
-        "columns": [
-            {"name": f"{table_name}_id", "type": "bigint", "nullable": False, "primary_key": True},
-            {"name": "person_id", "type": "bigint", "nullable": False, "foreign_key": "person.person_id"},
-            {"name": "concept_id", "type": "integer", "nullable": False},
-            {"name": "start_date", "type": "date", "nullable": False},
-            {"name": "end_date", "type": "date", "nullable": True},
-            {"name": "type_concept_id", "type": "integer", "nullable": False},
-            {"name": "provider_id", "type": "integer", "nullable": True},
-            {"name": "visit_occurrence_id", "type": "bigint", "nullable": True},
-            {"name": "source_value", "type": "varchar(50)", "nullable": True},
-            {"name": "created_date", "type": "timestamp", "nullable": False},
-            {"name": "updated_date", "type": "timestamp", "nullable": True}
-        ]
-    }
+    # Return simple list of column names to match actual kernel function
+    columns = [
+        f"{table_name}_id",
+        "person_id", 
+        "concept_id",
+        "start_date",
+        "end_date",
+        "type_concept_id",
+        "provider_id",
+        "visit_occurrence_id",
+        "source_value",
+        "created_date",
+        "updated_date"
+    ]
     
     if return_json:
-        return json.dumps(schema)
-    return schema
+        return json.dumps(columns)
+    return columns
