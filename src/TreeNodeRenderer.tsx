@@ -83,11 +83,11 @@ export const TreeNodeRenderer: FC<ITreeNodeRendererProps> = ({
     if (childNodesQuery.error) {
       showErrorWithRetry(
         childNodesQuery.error,
-        `Failed to load children for ${node.name}`,
+        `Failed to load children for ${node.data.name}`,
         () => childNodesQuery.refetch()
       );
     }
-  }, [childNodesQuery.error, node.id, node.name, childNodesQuery.refetch]);
+  }, [childNodesQuery.error, node.id, node.data.name, childNodesQuery.refetch]);
 
   // Update tree when child data is loaded
   useEffect(() => {
