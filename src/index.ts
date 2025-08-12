@@ -1,7 +1,9 @@
 import {
   JupyterFrontEnd,
-  JupyterFrontEndPlugin
+  JupyterFrontEndPlugin,
+  ILayoutRestorer
 } from '@jupyterlab/application';
+import { IStateDB } from '@jupyterlab/statedb';
 
 import { Panel } from '@lumino/widgets';
 import { LabIcon } from '@jupyterlab/ui-components';
@@ -11,22 +13,30 @@ import { QueryClient, QueryClientProvider } from '@tanstack/react-query';
 import { TreeBrowser } from './components/TreeBrowser';
 import treeIconSvg from '@fortawesome/fontawesome-free/svgs/solid/sitemap.svg';
 
+const EXTENSION_ID = 'cdm-tree-browser';
+const PLUGIN_ID = `${EXTENSION_ID}:plugin`;
+const TREE_ICON_ID = `${EXTENSION_ID}:tree-icon`;
+const PANEL_ID = `${EXTENSION_ID}-panel`;
+
 const treeIcon = new LabIcon({
-  name: 'cdm-tree-browser:tree-icon',
+  name: TREE_ICON_ID,
   svgstr: treeIconSvg
 });
 
 /**
- * Initialization data for the cdm-tree-browser extension.
+ * CDM Tree Browser JupyterLab extension plugin
  */
 const plugin: JupyterFrontEndPlugin<void> = {
-  id: 'cdm-tree-browser:plugin',
+  id: PLUGIN_ID,
   description:
     'A JupyterLab extension for browsing file/data trees in KBase CDM JupyterLab.',
   autoStart: true,
-  activate: (app: JupyterFrontEnd) => {
-    console.log('JupyterLab extension cdm-tree-browser is activated!');
-
+  requires: [ILayoutRestorer, IStateDB],
+  activate: (
+    app: JupyterFrontEnd,
+    restorer: ILayoutRestorer,
+    stateDB: IStateDB
+  ) => {
     // Create QueryClient for React Query
     const queryClient = new QueryClient({
       defaultOptions: {
@@ -42,22 +52,26 @@ const plugin: JupyterFrontEndPlugin<void> = {
       React.createElement(
         QueryClientProvider,
         { client: queryClient },
-        React.createElement(TreeBrowser, { jupyterApp: app })
+        React.createElement(TreeBrowser, { jupyterApp: app, restorer, stateDB })
       )
     );
 
-    // Create a new panel for the left sidebar
+    // Create sidebar panel
     const panel = new Panel();
-    panel.id = 'cdm-tree-browser-panel';
+    panel.id = PANEL_ID;
     panel.title.closable = true;
     panel.title.icon = treeIcon;
-    panel.title.label = 'CDM Browser';
+    panel.title.label = '';
 
-    // Add the React widget to the panel
+    // Configure widget styling
+    widget.addClass('jp-TreeBrowserWidget-root');
+    widget.node.style.height = '100%';
+    widget.node.style.overflow = 'hidden';
+
+    // Assemble and register panel
     panel.addWidget(widget);
-
-    // Add the panel to the left sidebar
     app.shell.add(panel, 'left', { rank: 1 });
+    restorer.add(panel, PANEL_ID);
   }
 };
 
