@@ -3,6 +3,8 @@ import { SessionContext } from '@jupyterlab/apputils';
 import { showSuccess } from '../utils/errorUtil';
 import { queryKernel } from '../components/kernelCommunication';
 
+const BERDL_METHODS_IMPORT = 'import cdm_tree_browser; (get_table_schema, get_databases, get_tables, get_my_groups, get_namespace_prefix, using_mocks) = cdm_tree_browser.get_cdm_methods();';
+
 /**
  * Hook to check if CDM methods are using mocks and show a success notification
  */
@@ -16,8 +18,8 @@ export function useMockNotification(
       }
 
       try {
-        const { data, error } = await queryKernel(
-          'import cdm_tree_browser; get_db_structure, get_table_schema, using_mocks = cdm_tree_browser.get_cdm_methods(); using_mocks',
+        const { data, error} = await queryKernel(
+          `${BERDL_METHODS_IMPORT} using_mocks`,
           sessionContext
         );
 
