@@ -8,6 +8,28 @@ A JupyterLab extension for browsing file/data trees in KBase CDM JupyterLab.
 
 - JupyterLab >= 4.0.0
 
+## BERDL Compatibility
+
+This extension is designed to work with BERDL (BER Data Lake) JupyterHub environments. It provides a tree browser widget that displays database and table structures from the Spark/Hive metastore.
+
+### Data Access Functions
+
+The extension automatically detects and uses the appropriate data access functions:
+
+1. **BERDL Notebooks** (Primary): Uses `berdl_notebook_utils.spark` module
+   - Requires the BERDL notebook image with `berdl_notebook_utils` installed
+   - Functions: `get_db_structure()`, `get_table_schema()`
+   - Repository: https://github.com/BERDataLakehouse/spark_notebook
+
+2. **Legacy CDM Notebooks**: Falls back to `spark.data_store` module
+   - For backward compatibility with older CDM environments
+
+3. **Development/Testing**: Uses built-in mock functions
+   - Automatically activates when no Spark data access is available
+   - Provides sample database structure for development
+
+The extension will display a notification indicator if it's running in mock mode.
+
 ## Install
 
 To install the extension, execute:

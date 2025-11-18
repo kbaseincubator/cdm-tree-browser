@@ -85,7 +85,7 @@ const RootDataLoader: FC<IRootDataLoaderProps> = ({
       );
     }
 
-    if (rootNodesQuery.data && rootNode.children !== rootNodesQuery.data) {
+    if (rootNodesQuery.data && !rootNode.children) {
       onNodeUpdate(rootNode.id, {
         ...rootNode,
         children: rootNodesQuery.data
@@ -94,7 +94,6 @@ const RootDataLoader: FC<IRootDataLoaderProps> = ({
   }, [
     rootNodesQuery.data,
     rootNodesQuery.error,
-    rootNode,
     providerName,
     onNodeUpdate
   ]);
