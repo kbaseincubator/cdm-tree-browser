@@ -154,6 +154,7 @@ export const TreeBrowser: FC<ITreeBrowserProps> = ({
             onInfoClick={toggleInfo}
             onToggle={handleTreeStateChange}
             restoreOpenNodeIds={hasUserInteracted ? [] : openNodeIds}
+            treeData={treeData}
           />
         )}
       </Tree>

@@ -16,8 +16,8 @@ export function useMockNotification(
       }
 
       try {
-        const { data, error } = await queryKernel(
-          'import cdm_tree_browser; get_db_structure, get_table_schema, using_mocks = cdm_tree_browser.get_cdm_methods(); using_mocks',
+        const { data, error} = await queryKernel(
+          'import cdm_tree_browser; (get_db_structure, get_table_schema, get_databases, get_tables, get_my_groups, get_namespace_prefix, using_mocks) = cdm_tree_browser.get_cdm_methods(); using_mocks',
           sessionContext
         );
 
