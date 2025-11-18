@@ -3,7 +3,11 @@ import { SessionContext } from '@jupyterlab/apputils';
 import { useQuery } from '@tanstack/react-query';
 import { Typography, Button } from '@mui/material';
 import { FontAwesomeIcon } from '@fortawesome/react-fontawesome';
-import { faDatabase, faTable, faUsers } from '@fortawesome/free-solid-svg-icons';
+import {
+  faDatabase,
+  faTable,
+  faUsers
+} from '@fortawesome/free-solid-svg-icons';
 import {
   BaseTreeNodeType,
   TreeNodeType,
@@ -24,7 +28,8 @@ interface IGroupsResponse {
   group_count: number;
 }
 
-const BERDL_METHODS_IMPORT = 'import cdm_tree_browser; (get_table_schema, get_databases, get_tables, get_my_groups, get_namespace_prefix, using_mocks) = cdm_tree_browser.get_cdm_methods();';
+const BERDL_METHODS_IMPORT =
+  'import cdm_tree_browser; (get_table_schema, get_databases, get_tables, get_my_groups, get_namespace_prefix, using_mocks) = cdm_tree_browser.get_cdm_methods();';
 
 /** Displays table schema by calling get_table_schema mock function */
 const TableSchemaDisplay: FC<{
@@ -118,104 +123,116 @@ const TableSchemaDisplay: FC<{
 };
 
 // BERDL Database Provider - fetches tenant, database and table structure
-export const berdlProvider: ITreeDataProvider<'tenant' | 'database' | 'table'> = {
-  name: 'Lakehouse Data',
-  supportedNodeTypes: ['tenant', 'database', 'table'],
-  parentNodeTypes: ['tenant', 'database'],
-  icon: <FontAwesomeIcon icon={faDatabase} />,
-  nodeTypeIcons: {
-    tenant: <FontAwesomeIcon icon={faUsers} />,
-    database: <FontAwesomeIcon icon={faDatabase} />,
-    table: <FontAwesomeIcon icon={faTable} />
-  },
-  nodeTypeInfoRenderers: {
-    table: (node, sessionContext) => (
-      <TableSchemaDisplay node={node} sessionContext={sessionContext} />
-    )
-  },
-  fetchRootNodes: async (sessionContext: SessionContext) => {
-    const { data, error } = await queryKernel(
-      `${BERDL_METHODS_IMPORT} result = get_my_groups(return_json=True); result`,
-      sessionContext
-    );
-
-    if (error) {
-      console.error('BERDL provider: Failed to fetch tenants:', error);
-      throw error;
-    }
-
-    const groupsResponse = parseKernelOutputJSON<IGroupsResponse>(data);
-
-    if (!groupsResponse || !groupsResponse.groups) {
-      return [];
-    }
-
-    return groupsResponse.groups.map(groupName => ({
-      id: `tenant://${groupName}`,
-      name: groupName,
-      type: 'tenant' as const
-    }));
-  },
-  fetchChildNodes: {
-    tenant: async (
-      node: BaseTreeNodeType<'tenant' | 'database' | 'table'>,
-      sessionContext: SessionContext
-    ): Promise<BaseTreeNodeType<'tenant' | 'database' | 'table'>[]> => {
+export const berdlProvider: ITreeDataProvider<'tenant' | 'database' | 'table'> =
+  {
+    name: 'Lakehouse Data',
+    supportedNodeTypes: ['tenant', 'database', 'table'],
+    parentNodeTypes: ['tenant', 'database'],
+    icon: <FontAwesomeIcon icon={faDatabase} />,
+    nodeTypeIcons: {
+      tenant: <FontAwesomeIcon icon={faUsers} />,
+      database: <FontAwesomeIcon icon={faDatabase} />,
+      table: <FontAwesomeIcon icon={faTable} />
+    },
+    nodeTypeInfoRenderers: {
+      table: (node, sessionContext) => (
+        <TableSchemaDisplay node={node} sessionContext={sessionContext} />
+      )
+    },
+    fetchRootNodes: async (sessionContext: SessionContext) => {
       const { data, error } = await queryKernel(
-        `import json; ${BERDL_METHODS_IMPORT} databases = get_databases(use_hms=True, return_json=False, filter_by_namespace=True); prefix_response = get_namespace_prefix(tenant="${node.name}", return_json=False); result = {"databases": databases, "prefix": prefix_response}; json.dumps(result)`,
+        `${BERDL_METHODS_IMPORT} result = get_my_groups(return_json=True); result`,
         sessionContext
       );
 
       if (error) {
-        console.error(`BERDL provider: Failed to fetch databases for tenant ${node.name}:`, error);
+        console.error('BERDL provider: Failed to fetch tenants:', error);
         throw error;
       }
 
-      const response = parseKernelOutputJSON<{databases: string[], prefix: {tenant_namespace_prefix: string}}>(data);
+      const groupsResponse = parseKernelOutputJSON<IGroupsResponse>(data);
 
-      if (!response || !response.databases) {
+      if (!groupsResponse || !groupsResponse.groups) {
         return [];
       }
 
-      const tenantPrefix = response.prefix.tenant_namespace_prefix;
-      const filteredDatabases = response.databases.filter(db =>
-        db.startsWith(tenantPrefix)
-      );
-
-      return filteredDatabases.map(databaseName => ({
-        id: `${node.id}/${databaseName}`,
-        name: databaseName,
-        type: 'database' as const,
-        data: { tenant: node.name }
+      return groupsResponse.groups.map(groupName => ({
+        id: `tenant://${groupName}`,
+        name: groupName,
+        type: 'tenant' as const
       }));
     },
-    database: async (
-      node: BaseTreeNodeType<'tenant' | 'database' | 'table'>,
-      sessionContext: SessionContext
-    ): Promise<BaseTreeNodeType<'tenant' | 'database' | 'table'>[]> => {
-      const { data, error } = await queryKernel(
-        `${BERDL_METHODS_IMPORT} result = get_tables("${node.name}", use_hms=True, return_json=True); result`,
-        sessionContext
-      );
+    fetchChildNodes: {
+      tenant: async (
+        node: BaseTreeNodeType<'tenant' | 'database' | 'table'>,
+        sessionContext: SessionContext
+      ): Promise<BaseTreeNodeType<'tenant' | 'database' | 'table'>[]> => {
+        const { data, error } = await queryKernel(
+          `import json; ${BERDL_METHODS_IMPORT} databases = get_databases(use_hms=True, return_json=False, filter_by_namespace=True); prefix_response = get_namespace_prefix(tenant="${node.name}", return_json=False); result = {"databases": databases, "prefix": prefix_response}; json.dumps(result)`,
+          sessionContext
+        );
 
-      if (error) {
-        console.error(`BERDL provider: Failed to fetch tables for database ${node.name}:`, error);
-        throw error;
-      }
+        if (error) {
+          console.error(
+            `BERDL provider: Failed to fetch databases for tenant ${node.name}:`,
+            error
+          );
+          throw error;
+        }
 
-      const tables = parseKernelOutputJSON<string[]>(data);
+        const response = parseKernelOutputJSON<{
+          databases: string[];
+          prefix: { tenant_namespace_prefix: string };
+        }>(data);
 
-      if (!tables) {
-        return [];
-      }
+        if (!response || !response.databases) {
+          return [];
+        }
 
-      return tables.map(tableName => ({
-        id: `${node.id}/${tableName}`,
-        name: tableName,
-        type: 'table' as const,
-        data: { tenant: node.data?.tenant, database: node.name }
-      }));
-    },
-    table: async (): Promise<BaseTreeNodeType<'tenant' | 'database' | 'table'>[]> => []
-  }
-};
+        const tenantPrefix = response.prefix.tenant_namespace_prefix;
+        const filteredDatabases = response.databases.filter(db =>
+          db.startsWith(tenantPrefix)
+        );
+
+        return filteredDatabases.map(databaseName => ({
+          id: `${node.id}/${databaseName}`,
+          name: databaseName,
+          type: 'database' as const,
+          data: { tenant: node.name }
+        }));
+      },
+      database: async (
+        node: BaseTreeNodeType<'tenant' | 'database' | 'table'>,
+        sessionContext: SessionContext
+      ): Promise<BaseTreeNodeType<'tenant' | 'database' | 'table'>[]> => {
+        const { data, error } = await queryKernel(
+          `${BERDL_METHODS_IMPORT} result = get_tables("${node.name}", use_hms=True, return_json=True); result`,
+          sessionContext
+        );
+
+        if (error) {
+          console.error(
+            `BERDL provider: Failed to fetch tables for database ${node.name}:`,
+            error
+          );
+          throw error;
+        }
+
+        const tables = parseKernelOutputJSON<string[]>(data);
+
+        if (!tables) {
+          return [];
+        }
+
+        return tables.map(tableName => ({
+          id: `${node.id}/${tableName}`,
+          name: tableName,
+          type: 'table' as const,
+          data: { tenant: node.data?.tenant, database: node.name }
+        }));
+      },
+      table: async (): Promise<
+        BaseTreeNodeType<'tenant' | 'database' | 'table'>[]
+      > => []
+    }
+  };

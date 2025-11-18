@@ -91,12 +91,7 @@ const RootDataLoader: FC<IRootDataLoaderProps> = ({
         children: rootNodesQuery.data
       });
     }
-  }, [
-    rootNodesQuery.data,
-    rootNodesQuery.error,
-    providerName,
-    onNodeUpdate
-  ]);
+  }, [rootNodesQuery.data, rootNodesQuery.error, providerName, onNodeUpdate]);
 
   return null; // This component renders nothing
 };

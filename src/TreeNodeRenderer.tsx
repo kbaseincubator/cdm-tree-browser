@@ -71,11 +71,7 @@ export const TreeNodeRenderer: FC<ITreeNodeRendererProps> = ({
     enabled: shouldLoadChildren,
     queryKey: ['tree-children', node.id],
     queryFn: () =>
-      treeQueryManager.loadChildNodesForNode(
-        node.id,
-        treeData,
-        sessionContext
-      ),
+      treeQueryManager.loadChildNodesForNode(node.id, treeData, sessionContext),
     staleTime: 5 * 60 * 1000, // Cache for 5 minutes
     retry: 2,
     retryDelay: 1000
