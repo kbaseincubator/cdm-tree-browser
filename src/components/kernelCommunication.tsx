@@ -52,6 +52,7 @@ export class KernelError extends Error {
 
 const KERNEL_NAME = 'python3';
 const KERNEL_START_TIMEOUT_MS = 60000;
+const KERNEL_EXEC_TIMEOUT_MS = 30000;
 
 /** Creates and initializes a sessionContext for use with a kernel */
 export const useSessionContext = (app: JupyterFrontEnd) => {
@@ -112,33 +113,33 @@ export const useSessionContext = (app: JupyterFrontEnd) => {
         if (disposed) return;
 
         // Monitor for kernel death and auto-reconnect
-        const kernel = sessionContext.session?.kernel;
-        if (kernel) {
-          const onStatusChange = async () => {
-            if (disposed) return;
-            if (kernel.status === 'dead') {
-              console.warn('Kernel died, attempting to reconnect...');
-              setIsConnecting(true);
-              try {
-                await sessionContext.changeKernel({ name: KERNEL_NAME });
-                if (!disposed) {
-                  setError(undefined);
-                  console.log('Kernel reconnected successfully');
-                }
-              } catch (reconnectError) {
-                if (!disposed) {
-                  setError(new Error('Kernel died and reconnection failed'));
-                  console.error('Failed to reconnect kernel:', reconnectError);
-                }
-              } finally {
-                if (!disposed) {
-                  setIsConnecting(false);
-                }
+        // Use sessionContext.statusChanged (not kernel.statusChanged) so
+        // listener survives kernel restarts
+        const onStatusChange = async () => {
+          if (disposed) return;
+          const status = sessionContext.session?.kernel?.status;
+          if (status === 'dead') {
+            console.warn('Kernel died, attempting to reconnect...');
+            setIsConnecting(true);
+            try {
+              await sessionContext.changeKernel({ name: KERNEL_NAME });
+              if (!disposed) {
+                setError(undefined);
+                console.log('Kernel reconnected successfully');
+              }
+            } catch (reconnectError) {
+              if (!disposed) {
+                setError(new Error('Kernel died and reconnection failed'));
+                console.error('Failed to reconnect kernel:', reconnectError);
+              }
+            } finally {
+              if (!disposed) {
+                setIsConnecting(false);
               }
             }
-          };
-          kernel.statusChanged.connect(onStatusChange);
-        }
+          }
+        };
+        sessionContext.statusChanged.connect(onStatusChange);
 
         setSc(sessionContext);
       } catch (reason) {
@@ -283,7 +284,7 @@ export const queryKernel = async (
           hasResolved = true;
           resolve({ error: new KernelError('timeout') });
         }
-      }, 30000);
+      }, KERNEL_EXEC_TIMEOUT_MS);
     }
   );
 
