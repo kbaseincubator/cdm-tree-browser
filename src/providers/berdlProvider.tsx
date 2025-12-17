@@ -183,7 +183,9 @@ export const berdlProvider: ITreeDataProvider<BerdlNodeType> = {
     if (groupsResponse.groups) {
       const processedGroups = [
         ...new Set(
-          groupsResponse.groups.map(g => (g.endsWith('ro') ? g.slice(0, -2) : g))
+          groupsResponse.groups.map(g =>
+            g.endsWith('ro') ? g.slice(0, -2) : g
+          )
         )
       ];
       for (const groupName of processedGroups) {
