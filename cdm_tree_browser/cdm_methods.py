@@ -34,8 +34,8 @@ def get_cdm_methods():
             result_dict = {
                 'username': result.username,
                 'user_namespace_prefix': result.user_namespace_prefix,
-                'tenant': result.tenant if hasattr(result, 'tenant') else None,
-                'tenant_namespace_prefix': result.tenant_namespace_prefix if hasattr(result, 'tenant_namespace_prefix') else None,
+                'tenant': getattr(result, 'tenant', None),
+                'tenant_namespace_prefix': getattr(result, 'tenant_namespace_prefix', None),
             }
             if return_json:
                 return json.dumps(result_dict)

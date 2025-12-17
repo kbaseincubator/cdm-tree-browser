@@ -148,26 +148,28 @@ export const TreeBrowser: FC<ITreeBrowserProps> = ({
         />
       )}
       {/* The actual tree UI component - takes full height */}
-      <Tree
-        ref={treeRef}
-        data={treeData}
-        openByDefault={false}
-        width={containerDimensions.width}
-        height={containerDimensions.height}
-      >
-        {nodeProps => (
-          <TreeNodeRenderer
-            key={nodeProps.node.id}
-            {...nodeProps}
-            sessionContext={sessionContext!}
-            onNodeUpdate={handleNodeUpdate}
-            onInfoClick={toggleInfo}
-            onToggle={handleTreeStateChange}
-            restoreOpenNodeIds={hasUserInteracted ? [] : openNodeIds}
-            treeData={treeData}
-          />
-        )}
-      </Tree>
+      {sessionContext && (
+        <Tree
+          ref={treeRef}
+          data={treeData}
+          openByDefault={false}
+          width={containerDimensions.width}
+          height={containerDimensions.height}
+        >
+          {nodeProps => (
+            <TreeNodeRenderer
+              key={nodeProps.node.id}
+              {...nodeProps}
+              sessionContext={sessionContext}
+              onNodeUpdate={handleNodeUpdate}
+              onInfoClick={toggleInfo}
+              onToggle={handleTreeStateChange}
+              restoreOpenNodeIds={hasUserInteracted ? [] : openNodeIds}
+              treeData={treeData}
+            />
+          )}
+        </Tree>
+      )}
 
       {/* Fixed bottom panel for node info */}
       <InfoPanel

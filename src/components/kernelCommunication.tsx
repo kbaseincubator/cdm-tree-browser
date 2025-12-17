@@ -77,8 +77,7 @@ export const useSessionContext = (app: JupyterFrontEnd) => {
             ? Object.keys(specs.kernelspecs).join(', ')
             : 'none';
           throw new Error(
-            `Kernel '${KERNEL_NAME}' not found. ` +
-            `Available: ${available}`
+            `Kernel '${KERNEL_NAME}' not found. ` + `Available: ${available}`
           );
         }
 
@@ -90,7 +89,9 @@ export const useSessionContext = (app: JupyterFrontEnd) => {
 
         const needsKernel = await sessionContext.initialize();
 
-        if (disposed) return;
+        if (disposed) {
+          return;
+        }
 
         if (needsKernel) {
           // Start kernel with timeout
@@ -100,23 +101,29 @@ export const useSessionContext = (app: JupyterFrontEnd) => {
 
           const timeoutPromise = new Promise((_, reject) => {
             setTimeout(() => {
-              reject(new Error(
-                `Timeout starting kernel after ` +
-                `${KERNEL_START_TIMEOUT_MS / 1000}s`
-              ));
+              reject(
+                new Error(
+                  'Timeout starting kernel after ' +
+                    `${KERNEL_START_TIMEOUT_MS / 1000}s`
+                )
+              );
             }, KERNEL_START_TIMEOUT_MS);
           });
 
           await Promise.race([kernelPromise, timeoutPromise]);
         }
 
-        if (disposed) return;
+        if (disposed) {
+          return;
+        }
 
         // Monitor for kernel death and auto-reconnect
         // Use sessionContext.statusChanged (not kernel.statusChanged) so
         // listener survives kernel restarts
         const onStatusChange = async () => {
-          if (disposed) return;
+          if (disposed || !sessionContext) {
+            return;
+          }
           const status = sessionContext.session?.kernel?.status;
           if (status === 'dead') {
             console.warn('Kernel died, attempting to reconnect...');
@@ -143,10 +150,11 @@ export const useSessionContext = (app: JupyterFrontEnd) => {
 
         setSc(sessionContext);
       } catch (reason) {
-        if (disposed) return;
-        const message = reason instanceof Error
-          ? reason.message
-          : String(reason);
+        if (disposed) {
+          return;
+        }
+        const message =
+          reason instanceof Error ? reason.message : String(reason);
         setError(new Error(message));
         console.error('Failed to initialize kernel session:', reason);
       } finally {
@@ -199,9 +207,9 @@ const waitForKernelReady = async (
       } else if (badStatuses.includes(kernel.status)) {
         clearTimeout(timeoutId);
         kernel.statusChanged.disconnect(onStatusChanged);
-        reject(new KernelError(
-          kernel.status === 'dead' ? 'dead' : 'not_ready'
-        ));
+        reject(
+          new KernelError(kernel.status === 'dead' ? 'dead' : 'not_ready')
+        );
       }
     };
 
