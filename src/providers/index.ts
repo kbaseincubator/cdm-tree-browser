@@ -1,9 +1,9 @@
 import { ITreeDataProvider } from '../sharedTypes';
-import { cdmProvider } from './cdmProvider';
+import { berdlProvider } from './berdlProvider';
 
 // Registry of all available data providers
 export const dataProviders = [
-  cdmProvider
+  berdlProvider
   // ADD NEW PROVIDERS HERE
 ] as ITreeDataProvider[];
 

@@ -85,19 +85,13 @@ const RootDataLoader: FC<IRootDataLoaderProps> = ({
       );
     }
 
-    if (rootNodesQuery.data && rootNode.children !== rootNodesQuery.data) {
+    if (rootNodesQuery.data && !rootNode.children) {
       onNodeUpdate(rootNode.id, {
         ...rootNode,
         children: rootNodesQuery.data
       });
     }
-  }, [
-    rootNodesQuery.data,
-    rootNodesQuery.error,
-    rootNode,
-    providerName,
-    onNodeUpdate
-  ]);
+  }, [rootNodesQuery.data, rootNodesQuery.error, providerName, onNodeUpdate]);
 
   return null; // This component renders nothing
 };

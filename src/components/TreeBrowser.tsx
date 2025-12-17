@@ -41,7 +41,11 @@ export const TreeBrowser: FC<ITreeBrowserProps> = ({
   restorer,
   stateDB
 }) => {
-  const { sessionContext, error: sessionError } = useSessionContext(jupyterApp);
+  const {
+    sessionContext,
+    error: sessionError,
+    isConnecting
+  } = useSessionContext(jupyterApp);
   const containerRef = useRef<HTMLDivElement>(null);
   const treeRef = useRef<TreeApi<TreeNodeType>>(null);
   const containerDimensions = useTreeDimensions(containerRef);
@@ -129,6 +133,12 @@ export const TreeBrowser: FC<ITreeBrowserProps> = ({
         padding: '8px'
       }}
     >
+      {/* Kernel connection status */}
+      {isConnecting && (
+        <div style={{ padding: '8px', color: '#666', fontSize: '12px' }}>
+          Connecting to kernel...
+        </div>
+      )}
       {/* Invisible component that manages data loading for all providers */}
       {sessionContext && (
         <TreeDataLoader
@@ -138,25 +148,28 @@ export const TreeBrowser: FC<ITreeBrowserProps> = ({
         />
       )}
       {/* The actual tree UI component - takes full height */}
-      <Tree
-        ref={treeRef}
-        data={treeData}
-        openByDefault={false}
-        width={containerDimensions.width}
-        height={containerDimensions.height}
-      >
-        {nodeProps => (
-          <TreeNodeRenderer
-            key={nodeProps.node.id}
-            {...nodeProps}
-            sessionContext={sessionContext!}
-            onNodeUpdate={handleNodeUpdate}
-            onInfoClick={toggleInfo}
-            onToggle={handleTreeStateChange}
-            restoreOpenNodeIds={hasUserInteracted ? [] : openNodeIds}
-          />
-        )}
-      </Tree>
+      {sessionContext && (
+        <Tree
+          ref={treeRef}
+          data={treeData}
+          openByDefault={false}
+          width={containerDimensions.width}
+          height={containerDimensions.height}
+        >
+          {nodeProps => (
+            <TreeNodeRenderer
+              key={nodeProps.node.id}
+              {...nodeProps}
+              sessionContext={sessionContext}
+              onNodeUpdate={handleNodeUpdate}
+              onInfoClick={toggleInfo}
+              onToggle={handleTreeStateChange}
+              restoreOpenNodeIds={hasUserInteracted ? [] : openNodeIds}
+              treeData={treeData}
+            />
+          )}
+        </Tree>
+      )}
 
       {/* Fixed bottom panel for node info */}
       <InfoPanel

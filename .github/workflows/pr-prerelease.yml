@@ -81,6 +81,7 @@ jobs:
         asset_content_type: application/gzip
 
     - name: Comment on PR
+      if: github.event.action == 'opened'
       uses: actions/github-script@v7
       with:
         script: |

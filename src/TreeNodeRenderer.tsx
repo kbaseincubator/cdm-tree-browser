@@ -24,6 +24,8 @@ interface ITreeNodeRendererProps extends NodeRendererProps<TreeNodeType> {
   onToggle?: () => void;
   /** Array of node IDs that should be restored to open state */
   restoreOpenNodeIds: string[];
+  /** The full tree data for searching nodes */
+  treeData: TreeNodeType[];
 }
 
 /** Function to get the appropriate icon for a node */
@@ -53,7 +55,8 @@ export const TreeNodeRenderer: FC<ITreeNodeRendererProps> = ({
   onNodeUpdate,
   onInfoClick,
   onToggle,
-  restoreOpenNodeIds
+  restoreOpenNodeIds,
+  treeData
 }) => {
   // Determine if we need to load children (parent is open but children not loaded)
   // Only load children for nodes that are configured as parent nodes in the provider, excluding ROOT nodes
@@ -68,11 +71,7 @@ export const TreeNodeRenderer: FC<ITreeNodeRendererProps> = ({
     enabled: shouldLoadChildren,
     queryKey: ['tree-children', node.id],
     queryFn: () =>
-      treeQueryManager.loadChildNodesForNode(
-        node.id,
-        tree.root.data.children!,
-        sessionContext
-      ),
+      treeQueryManager.loadChildNodesForNode(node.id, treeData, sessionContext),
     staleTime: 5 * 60 * 1000, // Cache for 5 minutes
     retry: 2,
     retryDelay: 1000
@@ -91,13 +90,13 @@ export const TreeNodeRenderer: FC<ITreeNodeRendererProps> = ({
 
   // Update tree when child data is loaded
   useEffect(() => {
-    if (childNodesQuery.data) {
+    if (childNodesQuery.data && node.data.children === undefined) {
       onNodeUpdate(node.id, {
         ...node.data,
         children: childNodesQuery.data
       });
     }
-  }, [childNodesQuery.data, node.id, node.data, onNodeUpdate]);
+  }, [childNodesQuery.data, node.id, onNodeUpdate]);
 
   // Auto-restore previously open node state for lazy-loaded nodes
   useEffect(() => {
