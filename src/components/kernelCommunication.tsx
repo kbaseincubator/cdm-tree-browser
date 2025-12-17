@@ -11,17 +11,39 @@ import { IOutput } from '@jupyterlab/nbformat';
 
 const SESSION_NAME = 'cdm-tree-browser';
 
+export type KernelErrorType =
+  | 'not_available'
+  | 'not_ready'
+  | 'execution_error'
+  | 'timeout'
+  | 'dead';
+
+const ERROR_MESSAGES: Record<KernelErrorType, string> = {
+  not_available: 'Kernel is not available',
+  not_ready: 'Kernel is not ready',
+  timeout: 'Request timed out',
+  dead: 'Kernel has stopped',
+  execution_error: 'Execution error'
+};
+
 export class KernelError extends Error {
+  public readonly type: KernelErrorType;
   public readonly traceback?: string[];
   public readonly ename?: string;
   public readonly evalue?: string;
 
   constructor(
-    message: string,
+    type: KernelErrorType,
     details?: { ename?: string; evalue?: string; traceback?: string[] }
   ) {
-    super(message);
+    const baseMessage = ERROR_MESSAGES[type];
+    const detailMessage = details?.evalue
+      ? `${details.ename || 'Error'}: ${details.evalue}`
+      : '';
+    super(detailMessage || baseMessage);
+
     this.name = 'KernelError';
+    this.type = type;
     this.ename = details?.ename;
     this.evalue = details?.evalue;
     this.traceback = details?.traceback;
@@ -160,16 +182,12 @@ const waitForKernelReady = async (
   }
 
   if (badStatuses.includes(kernel.status)) {
-    throw new KernelError(
-      `Kernel is in ${kernel.status} state`
-    );
+    throw new KernelError(kernel.status === 'dead' ? 'dead' : 'not_ready');
   }
 
   return new Promise((resolve, reject) => {
     const timeoutId = setTimeout(() => {
-      reject(new KernelError(
-        `Timeout waiting for kernel to be ready (status: ${kernel.status})`
-      ));
+      reject(new KernelError('timeout'));
     }, timeoutMs);
 
     const onStatusChanged = () => {
@@ -181,7 +199,7 @@ const waitForKernelReady = async (
         clearTimeout(timeoutId);
         kernel.statusChanged.disconnect(onStatusChanged);
         reject(new KernelError(
-          `Kernel entered ${kernel.status} state`
+          kernel.status === 'dead' ? 'dead' : 'not_ready'
         ));
       }
     };
@@ -197,18 +215,17 @@ export const queryKernel = async (
 ): Promise<{ data?: IOutput; error?: KernelError }> => {
   const kernel = sessionContext?.session?.kernel;
   if (!kernel) {
-    return { error: new KernelError('Jupyter kernel is not available') };
+    return { error: new KernelError('not_available') };
   }
 
   // Wait for kernel to be ready before executing
   try {
     await waitForKernelReady(kernel);
   } catch (error) {
-    return {
-      error: error instanceof KernelError
-        ? error
-        : new KernelError('Failed to connect to kernel')
-    };
+    if (error instanceof KernelError) {
+      return { error };
+    }
+    return { error: new KernelError('not_ready') };
   }
 
   const future: Kernel.IFuture<
@@ -252,14 +269,7 @@ export const queryKernel = async (
                 evalue: string;
                 traceback?: string[];
               };
-              const message =
-                errorContent.traceback?.join('\n') ||
-                `${errorContent.ename}: ${errorContent.evalue}`;
-              const error = new KernelError(message, {
-                ename: errorContent.ename,
-                evalue: errorContent.evalue,
-                traceback: errorContent.traceback
-              });
+              const error = new KernelError('execution_error', errorContent);
               resolve({ error });
             }
             break;
@@ -271,7 +281,7 @@ export const queryKernel = async (
       setTimeout(() => {
         if (!hasResolved) {
           hasResolved = true;
-          resolve({ error: new KernelError('Kernel execution timeout') });
+          resolve({ error: new KernelError('timeout') });
         }
       }, 30000);
     }
