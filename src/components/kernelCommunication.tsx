@@ -231,10 +231,27 @@ export const queryKernel = async (
               resolve({ data: msg.content as IOutput });
             }
             break;
+          case 'stream': {
+            // Log print() output for debugging
+            const streamContent = msg.content as {
+              name: 'stdout' | 'stderr';
+              text: string;
+            };
+            if (streamContent.name === 'stderr') {
+              console.warn('Kernel stderr:', streamContent.text);
+            } else {
+              console.debug('Kernel stdout:', streamContent.text);
+            }
+            break;
+          }
           case 'error':
             if (!hasResolved) {
               hasResolved = true;
-              const errorContent = msg.content as any;
+              const errorContent = msg.content as {
+                ename: string;
+                evalue: string;
+                traceback?: string[];
+              };
               const message =
                 errorContent.traceback?.join('\n') ||
                 `${errorContent.ename}: ${errorContent.evalue}`;
