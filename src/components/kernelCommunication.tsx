@@ -89,6 +89,35 @@ export const useSessionContext = (app: JupyterFrontEnd) => {
 
         if (disposed) return;
 
+        // Monitor for kernel death and auto-reconnect
+        const kernel = sessionContext.session?.kernel;
+        if (kernel) {
+          const onStatusChange = async () => {
+            if (disposed) return;
+            if (kernel.status === 'dead') {
+              console.warn('Kernel died, attempting to reconnect...');
+              setIsConnecting(true);
+              try {
+                await sessionContext.changeKernel({ name: KERNEL_NAME });
+                if (!disposed) {
+                  setError(undefined);
+                  console.log('Kernel reconnected successfully');
+                }
+              } catch (reconnectError) {
+                if (!disposed) {
+                  setError(new Error('Kernel died and reconnection failed'));
+                  console.error('Failed to reconnect kernel:', reconnectError);
+                }
+              } finally {
+                if (!disposed) {
+                  setIsConnecting(false);
+                }
+              }
+            }
+          };
+          kernel.statusChanged.connect(onStatusChange);
+        }
+
         setSc(sessionContext);
       } catch (reason) {
         if (disposed) return;
