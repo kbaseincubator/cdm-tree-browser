@@ -179,8 +179,14 @@ export const berdlProvider: ITreeDataProvider<BerdlNodeType> = {
     });
 
     // Add tenant/group nodes
+    // Strip 'ro' suffix (read-only copies) and deduplicate
     if (groupsResponse.groups) {
-      for (const groupName of groupsResponse.groups) {
+      const processedGroups = [
+        ...new Set(
+          groupsResponse.groups.map(g => (g.endsWith('ro') ? g.slice(0, -2) : g))
+        )
+      ];
+      for (const groupName of processedGroups) {
         nodes.push({
           id: `tenant://${groupName}`,
           name: groupName,
