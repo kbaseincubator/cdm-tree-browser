@@ -19,9 +19,14 @@ def get_cdm_methods():
         def get_my_groups(return_json=False):
             import json
             result = _get_my_groups()
+            result_dict = {
+                'username': result.username,
+                'groups': result.groups,
+                'group_count': result.group_count,
+            }
             if return_json:
-                return json.dumps(result)
-            return result
+                return json.dumps(result_dict)
+            return result_dict
 
         def get_namespace_prefix(tenant=None, return_json=False):
             import json
