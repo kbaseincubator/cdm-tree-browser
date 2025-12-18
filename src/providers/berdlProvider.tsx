@@ -159,7 +159,7 @@ export const berdlProvider: ITreeDataProvider<BerdlNodeType> = {
     );
 
     if (error) {
-      console.error('BERDL provider: Failed to fetch tenants:', error);
+      console.warn('BERDL provider: Failed to fetch tenants:', error);
       throw error;
     }
 
@@ -211,7 +211,7 @@ export const berdlProvider: ITreeDataProvider<BerdlNodeType> = {
       );
 
       if (error) {
-        console.error('BERDL provider: Failed to fetch user databases:', error);
+        console.warn('BERDL provider: Failed to fetch user databases:', error);
         throw error;
       }
 
@@ -246,7 +246,7 @@ export const berdlProvider: ITreeDataProvider<BerdlNodeType> = {
       );
 
       if (error) {
-        console.error(
+        console.warn(
           `BERDL provider: Failed to fetch databases for tenant ${node.name}:`,
           error
         );
@@ -284,7 +284,7 @@ export const berdlProvider: ITreeDataProvider<BerdlNodeType> = {
       );
 
       if (error) {
-        console.error(
+        console.warn(
           `BERDL provider: Failed to fetch tables for database ${node.name}:`,
           error
         );
