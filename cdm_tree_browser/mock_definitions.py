@@ -6,7 +6,19 @@ for development and testing when a real BERDL environment is not available.
 """
 
 import json
-from .mock_data import MOCK_DATABASE_STRUCTURE, MOCK_GROUPS, MOCK_TABLE_COLUMNS
+import time
+
+# Artificial delay in seconds for testing loading states (set to 0 to disable)
+MOCK_DELAY = 0
+
+from .mock_data import (
+    MOCK_DATABASE_STRUCTURE,
+    MOCK_GROUPS,
+    MOCK_TABLE_SCHEMAS,
+    MOCK_DEFAULT_COLUMNS,
+    MOCK_NAMESPACE_PREFIXES,
+    MOCK_USERNAME,
+)
 
 
 def get_table_schema(database_name, table_name, return_json=False):
@@ -22,8 +34,9 @@ def get_table_schema(database_name, table_name, return_json=False):
     Returns:
         list or str: List of column names
     """
-    # Generate column names based on table name
-    columns = [col.format(table_name=table_name) for col in MOCK_TABLE_COLUMNS]
+    time.sleep(MOCK_DELAY)
+    # Look up specific schema, fall back to default columns
+    columns = MOCK_TABLE_SCHEMAS.get(table_name, MOCK_DEFAULT_COLUMNS)
 
     if return_json:
         return json.dumps(columns)
@@ -41,6 +54,7 @@ def get_my_groups(return_json=False):
     Returns:
         dict or str: User groups response with username, groups list, and group_count
     """
+    time.sleep(MOCK_DELAY)
     if return_json:
         return json.dumps(MOCK_GROUPS)
     return MOCK_GROUPS
@@ -59,7 +73,7 @@ def get_databases(use_hms=True, return_json=True, filter_by_namespace=True):
     Returns:
         list or str: List of database names
     """
-    # Return all database names
+    time.sleep(MOCK_DELAY)
     all_dbs = list(MOCK_DATABASE_STRUCTURE.keys())
 
     if return_json:
@@ -80,6 +94,7 @@ def get_tables(database, use_hms=True, return_json=True):
     Returns:
         list or str: List of table names
     """
+    time.sleep(MOCK_DELAY)
     tables = MOCK_DATABASE_STRUCTURE.get(database, [])
 
     if return_json:
@@ -99,11 +114,21 @@ def get_namespace_prefix(tenant=None, return_json=False):
     Returns:
         dict or str: Namespace prefix information
     """
+    time.sleep(MOCK_DELAY)
+    # Get tenant prefix from config, or generate from tenant name
+    if tenant:
+        tenant_prefix = MOCK_NAMESPACE_PREFIXES.get(
+            tenant.lower(),
+            f'{tenant.lower()}_'
+        )
+    else:
+        tenant_prefix = None
+
     result = {
-        'username': 'mock_user',
-        'user_namespace_prefix': 'u_mock_user__',
+        'username': MOCK_USERNAME,
+        'user_namespace_prefix': MOCK_NAMESPACE_PREFIXES['user'],
         'tenant': tenant,
-        'tenant_namespace_prefix': f'{tenant.lower()}_' if tenant else None
+        'tenant_namespace_prefix': tenant_prefix
     }
 
     if return_json:

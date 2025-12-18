@@ -152,20 +152,19 @@ export const TreeNodeRenderer: FC<ITreeNodeRendererProps> = ({
             </IconButton>
           )}
           {/* Expand/collapse icon for non-provider parent nodes */}
-          {!node.isLeaf && !isProvider && (
+          {node.data.isParentNode && !isProvider && (
             <IconButton size="small">
-              <FontAwesomeIcon
-                fixedWidth
-                size="sm"
-                icon={
-                  childNodesQuery.isLoading
-                    ? faSpinner
-                    : node.isOpen
-                      ? faFolderOpen
-                      : faFolder
-                }
-                spin={childNodesQuery.isLoading}
-              />
+              {childNodesQuery.isLoading ? (
+                <FontAwesomeIcon fixedWidth size="sm" icon={faSpinner} spin />
+              ) : node.data.icon ? (
+                node.data.icon
+              ) : (
+                <FontAwesomeIcon
+                  fixedWidth
+                  size="sm"
+                  icon={node.isOpen ? faFolderOpen : faFolder}
+                />
+              )}
             </IconButton>
           )}
           {/* Node type icon for leaf nodes */}

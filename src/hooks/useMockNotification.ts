@@ -25,7 +25,7 @@ export function useMockNotification(
         );
 
         if (error) {
-          console.error('Failed to check mock usage:', error);
+          console.warn('Failed to check mock usage:', error);
           return;
         }
 
@@ -41,7 +41,7 @@ export function useMockNotification(
           }
         }
       } catch (error) {
-        console.error('Error checking mock usage:', error);
+        console.warn('Error checking mock usage:', error);
       }
     };
 
