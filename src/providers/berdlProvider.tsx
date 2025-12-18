@@ -6,7 +6,7 @@ import { FontAwesomeIcon } from '@fortawesome/react-fontawesome';
 import {
   faDatabase,
   faTable,
-  faUser,
+  faUserCircle,
   faUsers
 } from '@fortawesome/free-solid-svg-icons';
 import {
@@ -142,7 +142,7 @@ export const berdlProvider: ITreeDataProvider<BerdlNodeType> = {
   parentNodeTypes: ['userData', 'tenant', 'database'],
   icon: <FontAwesomeIcon icon={faDatabase} />,
   nodeTypeIcons: {
-    userData: <FontAwesomeIcon icon={faUser} />,
+    userData: <FontAwesomeIcon icon={faUserCircle} />,
     tenant: <FontAwesomeIcon icon={faUsers} />,
     database: <FontAwesomeIcon icon={faDatabase} />,
     table: <FontAwesomeIcon icon={faTable} />
@@ -171,11 +171,12 @@ export const berdlProvider: ITreeDataProvider<BerdlNodeType> = {
 
     const nodes: BaseTreeNodeType<'userData' | 'tenant'>[] = [];
 
-    // Add personal databases node first
+    // Add personal databases node first (using username)
     nodes.push({
       id: PERSONAL_NODE_ID,
-      name: 'My Data',
-      type: 'userData'
+      name: groupsResponse.username,
+      type: 'userData',
+      icon: <FontAwesomeIcon icon={faUserCircle} />
     });
 
     // Add tenant/group nodes
