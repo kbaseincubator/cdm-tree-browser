@@ -45,18 +45,38 @@ export const ContextMenu: FC<IContextMenuProps> = ({
     return null;
   }
 
-  const handleCopyName = () => {
-    navigator.clipboard.writeText(node.name);
-    close();
-  };
+  // Built-in menu items
+  const builtInItems: IContextMenuItem[] = [
+    {
+      label: 'Copy name',
+      icon: <FontAwesomeIcon icon={faCopy} />,
+      action: n => navigator.clipboard.writeText(n.name)
+    },
+    ...(node.infoRenderer
+      ? [
+          {
+            label: 'View details',
+            icon: <FontAwesomeIcon icon={faCircleInfo} />,
+            action: (n: TreeNodeType) => infoPanel.toggle(n)
+          }
+        ]
+      : [])
+  ];
 
-  const handleViewDetails = () => {
-    infoPanel.toggle(node);
-    close();
-  };
-
-  const showViewDetails = Boolean(node.infoRenderer);
   const providerItems = node.contextMenuItems || [];
+
+  const renderItem = (item: IContextMenuItem, index: number) => (
+    <MenuItem
+      key={index}
+      onClick={() => {
+        item.action(node, sessionContext);
+        close();
+      }}
+    >
+      {item.icon && <ListItemIcon>{item.icon}</ListItemIcon>}
+      <ListItemText>{item.label}</ListItemText>
+    </MenuItem>
+  );
 
   return (
     <Menu
@@ -65,36 +85,11 @@ export const ContextMenu: FC<IContextMenuProps> = ({
       anchorReference="anchorPosition"
       anchorPosition={anchorPosition}
     >
-      <MenuItem onClick={handleCopyName}>
-        <ListItemIcon>
-          <FontAwesomeIcon icon={faCopy} />
-        </ListItemIcon>
-        <ListItemText>Copy name</ListItemText>
-      </MenuItem>
-
-      {showViewDetails && (
-        <MenuItem onClick={handleViewDetails}>
-          <ListItemIcon>
-            <FontAwesomeIcon icon={faCircleInfo} />
-          </ListItemIcon>
-          <ListItemText>View details</ListItemText>
-        </MenuItem>
-      )}
-
+      {builtInItems.map(renderItem)}
       {providerItems.length > 0 && <Divider />}
-
-      {providerItems.map((item, index) => (
-        <MenuItem
-          key={index}
-          onClick={() => {
-            item.action(node, sessionContext);
-            close();
-          }}
-        >
-          {item.icon && <ListItemIcon>{item.icon}</ListItemIcon>}
-          <ListItemText>{item.label}</ListItemText>
-        </MenuItem>
-      ))}
+      {providerItems.map((item, index) =>
+        renderItem(item, index + builtInItems.length)
+      )}
     </Menu>
   );
 };
