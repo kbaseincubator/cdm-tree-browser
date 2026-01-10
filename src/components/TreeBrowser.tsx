@@ -14,10 +14,12 @@ import { TreeNodeType, TreeNodeMutator } from '../sharedTypes';
 import { treeQueryManager, updateNodeInTree } from '../treeQueryManager';
 import { useTreeDimensions } from '../hooks/useTreeDimensions';
 import { useInfoPanel } from '../hooks/useInfoPanel';
+import { useContextMenu } from '../hooks/useContextMenu';
 import { useMockNotification } from '../hooks/useMockNotification';
 import { TreeDataLoader } from '../TreeDataLoader';
 import { TreeNodeRenderer } from '../TreeNodeRenderer';
 import { InfoPanel } from '../InfoPanel';
+import { ContextMenu } from '../ContextMenu';
 import { showError } from '../utils/errorUtil';
 import { debounce } from '../utils/debounce';
 
@@ -50,6 +52,13 @@ export const TreeBrowser: FC<ITreeBrowserProps> = ({
   const treeRef = useRef<TreeApi<TreeNodeType>>(null);
   const containerDimensions = useTreeDimensions(containerRef);
   const { openNode, toggleInfo, closeInfo } = useInfoPanel();
+  const {
+    menuState,
+    isOpen: isContextMenuOpen,
+    openMenuFromButton,
+    openMenuFromRightClick,
+    closeMenu
+  } = useContextMenu();
 
   // Check if mocks are active and show notification
   useMockNotification(sessionContext);
@@ -62,6 +71,9 @@ export const TreeBrowser: FC<ITreeBrowserProps> = ({
   // State for tree node restoration
   const [openNodeIds, setOpenNodeIds] = useState<string[]>([]);
   const [hasUserInteracted, setHasUserInteracted] = useState(false);
+
+  // Track last clicked node for showing menu button on touch devices
+  const [activeNodeId, setActiveNodeId] = useState<string | null>(null);
 
   // Show session errors to user
   useEffect(() => {
@@ -122,6 +134,14 @@ export const TreeBrowser: FC<ITreeBrowserProps> = ({
     []
   );
 
+  // Handle "View details" from context menu
+  const handleViewDetails = useCallback(
+    (node: TreeNodeType) => {
+      toggleInfo(node.id, node);
+    },
+    [toggleInfo]
+  );
+
   return (
     <div
       ref={containerRef}
@@ -162,10 +182,13 @@ export const TreeBrowser: FC<ITreeBrowserProps> = ({
               {...nodeProps}
               sessionContext={sessionContext}
               onNodeUpdate={handleNodeUpdate}
-              onInfoClick={toggleInfo}
               onToggle={handleTreeStateChange}
               restoreOpenNodeIds={hasUserInteracted ? [] : openNodeIds}
               treeData={treeData}
+              onContextMenuButton={openMenuFromButton}
+              onContextMenuRightClick={openMenuFromRightClick}
+              activeNodeId={activeNodeId}
+              onNodeActive={setActiveNodeId}
             />
           )}
         </Tree>
@@ -176,6 +199,15 @@ export const TreeBrowser: FC<ITreeBrowserProps> = ({
         openNode={openNode}
         sessionContext={sessionContext || null}
         onClose={closeInfo}
+      />
+
+      {/* Context menu for tree nodes */}
+      <ContextMenu
+        menuState={menuState}
+        isOpen={isContextMenuOpen}
+        onClose={closeMenu}
+        onViewDetails={handleViewDetails}
+        sessionContext={sessionContext || null}
       />
     </div>
   );

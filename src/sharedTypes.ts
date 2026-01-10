@@ -39,6 +39,8 @@ export type TreeNodeType<T extends string = string, D = any> = BaseTreeNodeType<
     node: TreeNodeType<T, D>,
     sessionContext: SessionContext | null
   ) => React.ReactNode;
+  /** Context menu items - applied from provider configuration */
+  contextMenuItems?: IContextMenuItem<T>[];
   /** Child nodes with provider properties applied */
   children?: TreeNodeType<T, D>[];
 };
@@ -79,7 +81,26 @@ export interface ITreeDataProvider<T extends string = string> {
       sessionContext: SessionContext | null
     ) => React.ReactNode;
   };
+  /** Custom context menu items by node type */
+  contextMenuItems?: {
+    [K in T]?: IContextMenuItem<T>[];
+  };
 }
 
 /** Function type for updating nodes in the tree */
 export type TreeNodeMutator = (id: string, updatedNode: TreeNodeType) => void;
+
+/**
+ * Context menu item definition
+ */
+export interface IContextMenuItem<T extends string = string> {
+  /** Display label for the menu item */
+  label: string;
+  /** Optional icon to display next to the label */
+  icon?: React.ReactNode;
+  /** Action to perform when menu item is clicked */
+  action: (
+    node: TreeNodeType<T>,
+    sessionContext: SessionContext | null
+  ) => void;
+}
