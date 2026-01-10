@@ -3,21 +3,18 @@ import { SessionContext } from '@jupyterlab/apputils';
 import { Collapse, Paper, Typography, IconButton, Stack } from '@mui/material';
 import { FontAwesomeIcon } from '@fortawesome/react-fontawesome';
 import { faXmark } from '@fortawesome/free-solid-svg-icons';
-import { TreeNodeType } from './sharedTypes';
+import { IInfoPanel } from './hooks/useInfoPanel';
 
 interface IInfoPanelProps {
-  openNode: TreeNodeType | null;
+  infoPanel: IInfoPanel;
   sessionContext: SessionContext | null;
-  onClose: () => void;
 }
 
-export const InfoPanel: FC<IInfoPanelProps> = ({
-  openNode,
-  sessionContext,
-  onClose
-}) => {
+export const InfoPanel: FC<IInfoPanelProps> = ({ infoPanel, sessionContext }) => {
+  const { node, isOpen, close } = infoPanel;
+
   return (
-    <Collapse in={openNode !== null}>
+    <Collapse in={isOpen}>
       <Paper
         sx={{
           position: 'absolute',
@@ -31,7 +28,7 @@ export const InfoPanel: FC<IInfoPanelProps> = ({
           zIndex: 1000
         }}
       >
-        {openNode && (
+        {node && (
           <>
             {/* Header with close button */}
             <Stack
@@ -46,21 +43,21 @@ export const InfoPanel: FC<IInfoPanelProps> = ({
                 spacing={1}
                 sx={{ flexGrow: 1 }}
               >
-                {openNode.icon && (
-                  <span style={{ fontSize: '1.1em' }}>{openNode.icon}</span>
+                {node.icon && (
+                  <span style={{ fontSize: '1.1em' }}>{node.icon}</span>
                 )}
-                <Typography variant="h6">{openNode.name}</Typography>
+                <Typography variant="h6">{node.name}</Typography>
               </Stack>
-              <IconButton size="small" onClick={onClose} sx={{ ml: 1 }}>
+              <IconButton size="small" onClick={close} sx={{ ml: 1 }}>
                 <FontAwesomeIcon icon={faXmark} />
               </IconButton>
             </Stack>
 
             {/* Content */}
-            {openNode.infoRenderer?.(openNode, sessionContext) || (
+            {node.infoRenderer?.(node, sessionContext) || (
               <>
                 <Typography variant="body2" color="text.secondary" gutterBottom>
-                  Type: {openNode.type}
+                  Type: {node.type}
                 </Typography>
                 <Typography variant="body2">
                   Lorem ipsum dolor sit amet, consectetur adipiscing elit. Sed

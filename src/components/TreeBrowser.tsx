@@ -51,7 +51,7 @@ export const TreeBrowser: FC<ITreeBrowserProps> = ({
   const containerRef = useRef<HTMLDivElement>(null);
   const treeRef = useRef<TreeApi<TreeNodeType>>(null);
   const containerDimensions = useTreeDimensions(containerRef);
-  const { openNode, toggleInfo, closeInfo } = useInfoPanel();
+  const infoPanel = useInfoPanel();
   const contextMenu = useContextMenu();
 
   // Check if mocks are active and show notification
@@ -128,14 +128,6 @@ export const TreeBrowser: FC<ITreeBrowserProps> = ({
     []
   );
 
-  // Handle "View details" from context menu
-  const handleViewDetails = useCallback(
-    (node: TreeNodeType) => {
-      toggleInfo(node.id, node);
-    },
-    [toggleInfo]
-  );
-
   return (
     <div
       ref={containerRef}
@@ -190,15 +182,14 @@ export const TreeBrowser: FC<ITreeBrowserProps> = ({
 
       {/* Fixed bottom panel for node info */}
       <InfoPanel
-        openNode={openNode}
+        infoPanel={infoPanel}
         sessionContext={sessionContext || null}
-        onClose={closeInfo}
       />
 
       {/* Context menu for tree nodes */}
       <ContextMenu
         menu={contextMenu}
-        handlers={{ viewDetails: handleViewDetails }}
+        infoPanel={infoPanel}
         sessionContext={sessionContext || null}
       />
     </div>

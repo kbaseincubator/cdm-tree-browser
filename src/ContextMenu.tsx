@@ -11,6 +11,7 @@ import { faCopy, faCircleInfo } from '@fortawesome/free-solid-svg-icons';
 import { SessionContext } from '@jupyterlab/apputils';
 import { TreeNodeType } from './sharedTypes';
 import { IContextMenu } from './hooks/useContextMenu';
+import { IInfoPanel } from './hooks/useInfoPanel';
 
 /**
  * Context menu item definition for provider-defined menu items
@@ -27,20 +28,15 @@ export interface IContextMenuItem<T extends string = string> {
   ) => void;
 }
 
-/** Handler functions for context menu actions */
-export interface IContextMenuHandlers {
-  viewDetails?: (node: TreeNodeType) => void;
-}
-
 interface IContextMenuProps {
   menu: IContextMenu;
-  handlers: IContextMenuHandlers;
+  infoPanel: IInfoPanel;
   sessionContext: SessionContext | null;
 }
 
 export const ContextMenu: FC<IContextMenuProps> = ({
   menu,
-  handlers,
+  infoPanel,
   sessionContext
 }) => {
   const { node, anchorPosition, isOpen, close } = menu;
@@ -55,11 +51,11 @@ export const ContextMenu: FC<IContextMenuProps> = ({
   };
 
   const handleViewDetails = () => {
-    handlers.viewDetails?.(node);
+    infoPanel.toggle(node);
     close();
   };
 
-  const showViewDetails = Boolean(node.infoRenderer && handlers.viewDetails);
+  const showViewDetails = Boolean(node.infoRenderer);
   const providerItems = node.contextMenuItems || [];
 
   return (
