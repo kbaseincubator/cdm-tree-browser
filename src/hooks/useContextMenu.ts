@@ -1,57 +1,72 @@
-import { useState, useCallback } from 'react';
+import { useState, useCallback, useMemo } from 'react';
 import { TreeNodeType } from '../sharedTypes';
 
-export interface IContextMenuState {
-  /** Position for the menu */
-  anchorPosition: { top: number; left: number } | null;
+/** Context menu handle returned by useContextMenu */
+export interface IContextMenu {
   /** The node the context menu is for */
   node: TreeNodeType | null;
+  /** Position for the menu */
+  anchorPosition: { top: number; left: number } | null;
+  /** Whether the menu is open */
+  isOpen: boolean;
+  /** Open menu from a button click (anchored below button) */
+  openFromButton: (
+    event: React.MouseEvent<HTMLElement>,
+    node: TreeNodeType
+  ) => void;
+  /** Open menu from right-click (anchored at cursor) */
+  openFromRightClick: (
+    event: React.MouseEvent<HTMLElement>,
+    node: TreeNodeType
+  ) => void;
+  /** Close the menu */
+  close: () => void;
 }
 
-const INITIAL_STATE: IContextMenuState = {
-  anchorPosition: null,
-  node: null
-};
-
 /** Manages context menu state for tree nodes */
-export function useContextMenu() {
-  const [menuState, setMenuState] = useState<IContextMenuState>(INITIAL_STATE);
+export function useContextMenu(): IContextMenu {
+  const [node, setNode] = useState<TreeNodeType | null>(null);
+  const [anchorPosition, setAnchorPosition] = useState<{
+    top: number;
+    left: number;
+  } | null>(null);
 
-  const openMenuFromButton = useCallback(
-    (event: React.MouseEvent<HTMLElement>, node: TreeNodeType) => {
+  const openFromButton = useCallback(
+    (event: React.MouseEvent<HTMLElement>, targetNode: TreeNodeType) => {
       event.stopPropagation();
       const rect = event.currentTarget.getBoundingClientRect();
-      setMenuState({
-        anchorPosition: { top: rect.bottom, left: rect.left },
-        node
-      });
+      setAnchorPosition({ top: rect.bottom, left: rect.left });
+      setNode(targetNode);
     },
     []
   );
 
-  const openMenuFromRightClick = useCallback(
-    (event: React.MouseEvent<HTMLElement>, node: TreeNodeType) => {
+  const openFromRightClick = useCallback(
+    (event: React.MouseEvent<HTMLElement>, targetNode: TreeNodeType) => {
       event.preventDefault();
       event.stopPropagation();
-      setMenuState({
-        anchorPosition: { top: event.clientY, left: event.clientX },
-        node
-      });
+      setAnchorPosition({ top: event.clientY, left: event.clientX });
+      setNode(targetNode);
     },
     []
   );
 
-  const closeMenu = useCallback(() => {
-    setMenuState(INITIAL_STATE);
+  const close = useCallback(() => {
+    setAnchorPosition(null);
+    setNode(null);
   }, []);
 
-  const isOpen = Boolean(menuState.anchorPosition);
+  const isOpen = Boolean(anchorPosition);
 
-  return {
-    menuState,
-    isOpen,
-    openMenuFromButton,
-    openMenuFromRightClick,
-    closeMenu
-  };
+  return useMemo(
+    () => ({
+      node,
+      anchorPosition,
+      isOpen,
+      openFromButton,
+      openFromRightClick,
+      close
+    }),
+    [node, anchorPosition, isOpen, openFromButton, openFromRightClick, close]
+  );
 }

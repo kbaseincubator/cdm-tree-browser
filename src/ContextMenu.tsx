@@ -10,24 +10,40 @@ import { FontAwesomeIcon } from '@fortawesome/react-fontawesome';
 import { faCopy, faCircleInfo } from '@fortawesome/free-solid-svg-icons';
 import { SessionContext } from '@jupyterlab/apputils';
 import { TreeNodeType } from './sharedTypes';
-import { IContextMenuState } from './hooks/useContextMenu';
+import { IContextMenu } from './hooks/useContextMenu';
+
+/**
+ * Context menu item definition for provider-defined menu items
+ */
+export interface IContextMenuItem<T extends string = string> {
+  /** Display label for the menu item */
+  label: string;
+  /** Optional icon to display next to the label */
+  icon?: React.ReactNode;
+  /** Action to perform when menu item is clicked */
+  action: (
+    node: TreeNodeType<T>,
+    sessionContext: SessionContext | null
+  ) => void;
+}
+
+/** Handler functions for context menu actions */
+export interface IContextMenuHandlers {
+  viewDetails?: (node: TreeNodeType) => void;
+}
 
 interface IContextMenuProps {
-  menuState: IContextMenuState;
-  isOpen: boolean;
-  onClose: () => void;
-  onViewDetails: (node: TreeNodeType) => void;
+  menu: IContextMenu;
+  handlers: IContextMenuHandlers;
   sessionContext: SessionContext | null;
 }
 
 export const ContextMenu: FC<IContextMenuProps> = ({
-  menuState,
-  isOpen,
-  onClose,
-  onViewDetails,
+  menu,
+  handlers,
   sessionContext
 }) => {
-  const { node, anchorPosition } = menuState;
+  const { node, anchorPosition, isOpen, close } = menu;
 
   if (!node || !anchorPosition) {
     return null;
@@ -35,21 +51,21 @@ export const ContextMenu: FC<IContextMenuProps> = ({
 
   const handleCopyName = () => {
     navigator.clipboard.writeText(node.name);
-    onClose();
+    close();
   };
 
   const handleViewDetails = () => {
-    onViewDetails(node);
-    onClose();
+    handlers.viewDetails?.(node);
+    close();
   };
 
-  const hasInfoRenderer = Boolean(node.infoRenderer);
+  const showViewDetails = Boolean(node.infoRenderer && handlers.viewDetails);
   const providerItems = node.contextMenuItems || [];
 
   return (
     <Menu
       open={isOpen}
-      onClose={onClose}
+      onClose={close}
       anchorReference="anchorPosition"
       anchorPosition={anchorPosition}
     >
@@ -60,7 +76,7 @@ export const ContextMenu: FC<IContextMenuProps> = ({
         <ListItemText>Copy name</ListItemText>
       </MenuItem>
 
-      {hasInfoRenderer && (
+      {showViewDetails && (
         <MenuItem onClick={handleViewDetails}>
           <ListItemIcon>
             <FontAwesomeIcon icon={faCircleInfo} />
@@ -76,7 +92,7 @@ export const ContextMenu: FC<IContextMenuProps> = ({
           key={index}
           onClick={() => {
             item.action(node, sessionContext);
-            onClose();
+            close();
           }}
         >
           {item.icon && <ListItemIcon>{item.icon}</ListItemIcon>}

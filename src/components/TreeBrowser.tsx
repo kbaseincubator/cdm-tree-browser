@@ -52,13 +52,7 @@ export const TreeBrowser: FC<ITreeBrowserProps> = ({
   const treeRef = useRef<TreeApi<TreeNodeType>>(null);
   const containerDimensions = useTreeDimensions(containerRef);
   const { openNode, toggleInfo, closeInfo } = useInfoPanel();
-  const {
-    menuState,
-    isOpen: isContextMenuOpen,
-    openMenuFromButton,
-    openMenuFromRightClick,
-    closeMenu
-  } = useContextMenu();
+  const contextMenu = useContextMenu();
 
   // Check if mocks are active and show notification
   useMockNotification(sessionContext);
@@ -185,8 +179,8 @@ export const TreeBrowser: FC<ITreeBrowserProps> = ({
               onToggle={handleTreeStateChange}
               restoreOpenNodeIds={hasUserInteracted ? [] : openNodeIds}
               treeData={treeData}
-              onContextMenuButton={openMenuFromButton}
-              onContextMenuRightClick={openMenuFromRightClick}
+              onContextMenuButton={contextMenu.openFromButton}
+              onContextMenuRightClick={contextMenu.openFromRightClick}
               activeNodeId={activeNodeId}
               onNodeActive={setActiveNodeId}
             />
@@ -203,10 +197,8 @@ export const TreeBrowser: FC<ITreeBrowserProps> = ({
 
       {/* Context menu for tree nodes */}
       <ContextMenu
-        menuState={menuState}
-        isOpen={isContextMenuOpen}
-        onClose={closeMenu}
-        onViewDetails={handleViewDetails}
+        menu={contextMenu}
+        handlers={{ viewDetails: handleViewDetails }}
         sessionContext={sessionContext || null}
       />
     </div>

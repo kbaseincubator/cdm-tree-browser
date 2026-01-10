@@ -1,5 +1,6 @@
 import React from 'react';
 import { SessionContext } from '@jupyterlab/apputils';
+import { IContextMenuItem } from './ContextMenu';
 
 /**
  * Base tree node type without provider-applied properties
@@ -89,18 +90,3 @@ export interface ITreeDataProvider<T extends string = string> {
 
 /** Function type for updating nodes in the tree */
 export type TreeNodeMutator = (id: string, updatedNode: TreeNodeType) => void;
-
-/**
- * Context menu item definition
- */
-export interface IContextMenuItem<T extends string = string> {
-  /** Display label for the menu item */
-  label: string;
-  /** Optional icon to display next to the label */
-  icon?: React.ReactNode;
-  /** Action to perform when menu item is clicked */
-  action: (
-    node: TreeNodeType<T>,
-    sessionContext: SessionContext | null
-  ) => void;
-}
