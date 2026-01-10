@@ -9,8 +9,16 @@ import {
 import { FontAwesomeIcon } from '@fortawesome/react-fontawesome';
 import { faCopy, faCircleInfo } from '@fortawesome/free-solid-svg-icons';
 import { SessionContext } from '@jupyterlab/apputils';
+import { INotebookTracker } from '@jupyterlab/notebook';
+import { JupyterFrontEnd } from '@jupyterlab/application';
 import { TreeNodeType } from './sharedTypes';
 import { IInfoPanel } from './InfoPanel';
+
+/** JupyterLab services available to context menu actions */
+export interface IContextMenuServices {
+  app: JupyterFrontEnd;
+  notebookTracker: INotebookTracker;
+}
 
 /** Context menu state and controls */
 export interface IContextMenu {
@@ -45,7 +53,8 @@ export interface IContextMenuItem<T extends string = string> {
   /** Action to perform when menu item is clicked */
   action: (
     node: TreeNodeType<T>,
-    sessionContext: SessionContext | null
+    sessionContext: SessionContext | null,
+    services: IContextMenuServices
   ) => void;
 }
 
@@ -53,12 +62,14 @@ interface IContextMenuProps {
   state: IContextMenu;
   infoPanel: IInfoPanel;
   sessionContext: SessionContext | null;
+  services: IContextMenuServices;
 }
 
 export const ContextMenu: FC<IContextMenuProps> = ({
   state,
   infoPanel,
-  sessionContext
+  sessionContext,
+  services
 }) => {
   const { node, anchorPosition, isOpen, close } = state;
 
@@ -90,7 +101,7 @@ export const ContextMenu: FC<IContextMenuProps> = ({
     <MenuItem
       key={index}
       onClick={() => {
-        item.action(node, sessionContext);
+        item.action(node, sessionContext, services);
         close();
       }}
     >

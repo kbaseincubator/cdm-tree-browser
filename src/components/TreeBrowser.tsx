@@ -8,6 +8,7 @@ import React, {
 } from 'react';
 import { JupyterFrontEnd, ILayoutRestorer } from '@jupyterlab/application';
 import { IStateDB } from '@jupyterlab/statedb';
+import { INotebookTracker } from '@jupyterlab/notebook';
 import { Tree, TreeApi } from 'react-arborist';
 import { useSessionContext } from './kernelCommunication';
 import { TreeNodeType, TreeNodeMutator } from '../sharedTypes';
@@ -19,7 +20,7 @@ import { useMockNotification } from '../hooks/useMockNotification';
 import { TreeDataLoader } from '../TreeDataLoader';
 import { TreeNodeRenderer } from '../TreeNodeRenderer';
 import { InfoPanel } from '../InfoPanel';
-import { ContextMenu } from '../ContextMenu';
+import { ContextMenu, IContextMenuServices } from '../ContextMenu';
 import { showError } from '../utils/errorUtil';
 import { debounce } from '../utils/debounce';
 
@@ -30,6 +31,7 @@ interface ITreeBrowserProps {
   jupyterApp: JupyterFrontEnd;
   restorer: ILayoutRestorer;
   stateDB: IStateDB;
+  notebookTracker: INotebookTracker;
 }
 
 /**
@@ -41,13 +43,20 @@ interface ITreeBrowserProps {
 export const TreeBrowser: FC<ITreeBrowserProps> = ({
   jupyterApp,
   restorer,
-  stateDB
+  stateDB,
+  notebookTracker
 }) => {
   const {
     sessionContext,
     error: sessionError,
     isConnecting
   } = useSessionContext(jupyterApp);
+
+  // Services object for context menu actions
+  const services: IContextMenuServices = useMemo(
+    () => ({ app: jupyterApp, notebookTracker }),
+    [jupyterApp, notebookTracker]
+  );
   const containerRef = useRef<HTMLDivElement>(null);
   const treeRef = useRef<TreeApi<TreeNodeType>>(null);
   const containerDimensions = useTreeDimensions(containerRef);
@@ -191,6 +200,7 @@ export const TreeBrowser: FC<ITreeBrowserProps> = ({
         state={contextMenu}
         infoPanel={infoPanel}
         sessionContext={sessionContext || null}
+        services={services}
       />
     </div>
   );
