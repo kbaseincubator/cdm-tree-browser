@@ -3,3 +3,32 @@
 
     https://jupyterlab.readthedocs.io/en/stable/developer/css.html
 */
+
+/* Tree node row needs relative positioning for absolute button */
+.cdm-tree-node-row {
+  position: relative;
+  width: 100%;
+}
+
+/* Tree node context menu button */
+
+/* On hover-capable devices: hidden until hover */
+
+/* On touch devices: hidden until node is clicked (active) */
+.cdm-tree-menu-button {
+  opacity: 0;
+  transition: opacity 0.15s ease-in-out;
+}
+
+/* Show when active (last clicked node) - works on all devices */
+.cdm-tree-menu-button-active {
+  opacity: 1;
+}
+
+/* Show on hover - only on hover-capable devices */
+@media (hover: hover) {
+  .cdm-tree-menu-button:hover,
+  .cdm-tree-node-row:hover .cdm-tree-menu-button {
+    opacity: 1;
+  }
+}

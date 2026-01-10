@@ -1,5 +1,6 @@
 import React from 'react';
 import { SessionContext } from '@jupyterlab/apputils';
+import { IContextMenuItem } from './ContextMenu';
 
 /**
  * Base tree node type without provider-applied properties
@@ -39,6 +40,8 @@ export type TreeNodeType<T extends string = string, D = any> = BaseTreeNodeType<
     node: TreeNodeType<T, D>,
     sessionContext: SessionContext | null
   ) => React.ReactNode;
+  /** Context menu items - applied from provider configuration */
+  contextMenuItems?: IContextMenuItem<T>[];
   /** Child nodes with provider properties applied */
   children?: TreeNodeType<T, D>[];
 };
@@ -78,6 +81,10 @@ export interface ITreeDataProvider<T extends string = string> {
       node: TreeNodeType<T>,
       sessionContext: SessionContext | null
     ) => React.ReactNode;
+  };
+  /** Custom context menu items by node type */
+  contextMenuItems?: {
+    [K in T]?: IContextMenuItem<T>[];
   };
 }
 

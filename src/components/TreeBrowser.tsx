@@ -8,16 +8,19 @@ import React, {
 } from 'react';
 import { JupyterFrontEnd, ILayoutRestorer } from '@jupyterlab/application';
 import { IStateDB } from '@jupyterlab/statedb';
+import { INotebookTracker } from '@jupyterlab/notebook';
 import { Tree, TreeApi } from 'react-arborist';
 import { useSessionContext } from './kernelCommunication';
 import { TreeNodeType, TreeNodeMutator } from '../sharedTypes';
 import { treeQueryManager, updateNodeInTree } from '../treeQueryManager';
 import { useTreeDimensions } from '../hooks/useTreeDimensions';
 import { useInfoPanel } from '../hooks/useInfoPanel';
+import { useContextMenu } from '../hooks/useContextMenu';
 import { useMockNotification } from '../hooks/useMockNotification';
 import { TreeDataLoader } from '../TreeDataLoader';
 import { TreeNodeRenderer } from '../TreeNodeRenderer';
 import { InfoPanel } from '../InfoPanel';
+import { ContextMenu, IContextMenuServices } from '../ContextMenu';
 import { showError } from '../utils/errorUtil';
 import { debounce } from '../utils/debounce';
 
@@ -28,6 +31,7 @@ interface ITreeBrowserProps {
   jupyterApp: JupyterFrontEnd;
   restorer: ILayoutRestorer;
   stateDB: IStateDB;
+  notebookTracker: INotebookTracker;
 }
 
 /**
@@ -39,17 +43,25 @@ interface ITreeBrowserProps {
 export const TreeBrowser: FC<ITreeBrowserProps> = ({
   jupyterApp,
   restorer,
-  stateDB
+  stateDB,
+  notebookTracker
 }) => {
   const {
     sessionContext,
     error: sessionError,
     isConnecting
   } = useSessionContext(jupyterApp);
+
+  // Services object for context menu actions
+  const services: IContextMenuServices = useMemo(
+    () => ({ app: jupyterApp, notebookTracker }),
+    [jupyterApp, notebookTracker]
+  );
   const containerRef = useRef<HTMLDivElement>(null);
   const treeRef = useRef<TreeApi<TreeNodeType>>(null);
   const containerDimensions = useTreeDimensions(containerRef);
-  const { openNode, toggleInfo, closeInfo } = useInfoPanel();
+  const infoPanel = useInfoPanel();
+  const contextMenu = useContextMenu();
 
   // Check if mocks are active and show notification
   useMockNotification(sessionContext);
@@ -62,6 +74,9 @@ export const TreeBrowser: FC<ITreeBrowserProps> = ({
   // State for tree node restoration
   const [openNodeIds, setOpenNodeIds] = useState<string[]>([]);
   const [hasUserInteracted, setHasUserInteracted] = useState(false);
+
+  // Track last clicked node for showing menu button on touch devices
+  const [activeNodeId, setActiveNodeId] = useState<string | null>(null);
 
   // Show session errors to user
   useEffect(() => {
@@ -162,10 +177,13 @@ export const TreeBrowser: FC<ITreeBrowserProps> = ({
               {...nodeProps}
               sessionContext={sessionContext}
               onNodeUpdate={handleNodeUpdate}
-              onInfoClick={toggleInfo}
               onToggle={handleTreeStateChange}
               restoreOpenNodeIds={hasUserInteracted ? [] : openNodeIds}
               treeData={treeData}
+              onContextMenuButton={contextMenu.openFromButton}
+              onContextMenuRightClick={contextMenu.openFromRightClick}
+              activeNodeId={activeNodeId}
+              onNodeActive={setActiveNodeId}
             />
           )}
         </Tree>
@@ -173,9 +191,16 @@ export const TreeBrowser: FC<ITreeBrowserProps> = ({
 
       {/* Fixed bottom panel for node info */}
       <InfoPanel
-        openNode={openNode}
+        state={infoPanel}
         sessionContext={sessionContext || null}
-        onClose={closeInfo}
+      />
+
+      {/* Context menu for tree nodes */}
+      <ContextMenu
+        state={contextMenu}
+        infoPanel={infoPanel}
+        sessionContext={sessionContext || null}
+        services={services}
       />
     </div>
   );

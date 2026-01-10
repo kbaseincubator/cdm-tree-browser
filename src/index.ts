@@ -4,6 +4,7 @@ import {
   ILayoutRestorer
 } from '@jupyterlab/application';
 import { IStateDB } from '@jupyterlab/statedb';
+import { INotebookTracker } from '@jupyterlab/notebook';
 
 import { Panel } from '@lumino/widgets';
 import { LabIcon } from '@jupyterlab/ui-components';
@@ -31,11 +32,12 @@ const plugin: JupyterFrontEndPlugin<void> = {
   description:
     'A JupyterLab extension for browsing file/data trees in KBase CDM JupyterLab.',
   autoStart: true,
-  requires: [ILayoutRestorer, IStateDB],
+  requires: [ILayoutRestorer, IStateDB, INotebookTracker],
   activate: (
     app: JupyterFrontEnd,
     restorer: ILayoutRestorer,
-    stateDB: IStateDB
+    stateDB: IStateDB,
+    notebookTracker: INotebookTracker
   ) => {
     // Create QueryClient for React Query
     const queryClient = new QueryClient({
@@ -52,7 +54,12 @@ const plugin: JupyterFrontEndPlugin<void> = {
       React.createElement(
         QueryClientProvider,
         { client: queryClient },
-        React.createElement(TreeBrowser, { jupyterApp: app, restorer, stateDB })
+        React.createElement(TreeBrowser, {
+          jupyterApp: app,
+          restorer,
+          stateDB,
+          notebookTracker
+        })
       )
     );
 

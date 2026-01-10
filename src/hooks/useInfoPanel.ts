@@ -1,29 +1,29 @@
-import { useState, useCallback } from 'react';
+import { useState, useCallback, useMemo } from 'react';
 import { TreeNodeType } from '../sharedTypes';
+import { IInfoPanel } from '../InfoPanel';
 
 /** Manages info panel state for displaying node details */
-export function useInfoPanel() {
-  const [openNode, setOpenNode] = useState<TreeNodeType | null>(null);
+export function useInfoPanel(): IInfoPanel {
+  const [node, setNode] = useState<TreeNodeType | null>(null);
 
-  const toggleInfo = useCallback((nodeId: string, node: TreeNodeType) => {
-    setOpenNode(currentNode => {
-      if (currentNode?.id === nodeId) {
-        // Close if clicking the same node
-        return null;
-      } else {
-        // Open new node
-        return node;
-      }
-    });
+  const open = useCallback((targetNode: TreeNodeType) => {
+    setNode(targetNode);
   }, []);
 
-  const closeInfo = useCallback(() => {
-    setOpenNode(null);
+  const close = useCallback(() => {
+    setNode(null);
   }, []);
 
-  return {
-    openNode,
-    toggleInfo,
-    closeInfo
-  };
+  const toggle = useCallback((targetNode: TreeNodeType) => {
+    setNode(currentNode =>
+      currentNode?.id === targetNode.id ? null : targetNode
+    );
+  }, []);
+
+  const isOpen = node !== null;
+
+  return useMemo(
+    () => ({ node, isOpen, open, close, toggle }),
+    [node, isOpen, open, close, toggle]
+  );
 }

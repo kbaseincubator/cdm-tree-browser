@@ -8,7 +8,7 @@ import {
   faFile,
   faFolder,
   faFolderOpen,
-  faCircleInfo,
+  faEllipsisVertical,
   faSpinner
 } from '@fortawesome/free-solid-svg-icons';
 import { TreeNodeType, TreeNodeMutator } from './sharedTypes';
@@ -19,13 +19,26 @@ import { showErrorWithRetry } from './utils/errorUtil';
 interface ITreeNodeRendererProps extends NodeRendererProps<TreeNodeType> {
   sessionContext: SessionContext;
   onNodeUpdate: TreeNodeMutator;
-  onInfoClick: (nodeId: string, node: TreeNodeType) => void;
   /** Callback triggered when node open state changes */
   onToggle?: () => void;
   /** Array of node IDs that should be restored to open state */
   restoreOpenNodeIds: string[];
   /** The full tree data for searching nodes */
   treeData: TreeNodeType[];
+  /** Callback for context menu button click */
+  onContextMenuButton: (
+    event: React.MouseEvent<HTMLElement>,
+    node: TreeNodeType
+  ) => void;
+  /** Callback for right-click context menu */
+  onContextMenuRightClick: (
+    event: React.MouseEvent<HTMLElement>,
+    node: TreeNodeType
+  ) => void;
+  /** ID of the last clicked node (for touch device menu button visibility) */
+  activeNodeId: string | null;
+  /** Callback when node is clicked */
+  onNodeActive: (nodeId: string) => void;
 }
 
 /** Function to get the appropriate icon for a node */
@@ -53,10 +66,13 @@ export const TreeNodeRenderer: FC<ITreeNodeRendererProps> = ({
   tree,
   sessionContext,
   onNodeUpdate,
-  onInfoClick,
   onToggle,
   restoreOpenNodeIds,
-  treeData
+  treeData,
+  onContextMenuButton,
+  onContextMenuRightClick,
+  activeNodeId,
+  onNodeActive
 }) => {
   // Determine if we need to load children (parent is open but children not loaded)
   // Only load children for nodes that are configured as parent nodes in the provider, excluding ROOT nodes
@@ -116,6 +132,9 @@ export const TreeNodeRenderer: FC<ITreeNodeRendererProps> = ({
   }, [node.id, node.isOpen, node.isLeaf, restoreOpenNodeIds, tree, onToggle]);
 
   const handleNodeClick = () => {
+    // Mark this node as active (for touch device menu button visibility)
+    onNodeActive(node.id);
+
     if (!node.isLeaf) {
       tree.get(node.id)?.toggle();
       // Notify parent of state change after DOM update
@@ -125,16 +144,27 @@ export const TreeNodeRenderer: FC<ITreeNodeRendererProps> = ({
     }
   };
 
-  const handleInfoClick = (e: React.MouseEvent) => {
+  const handleMenuButtonClick = (e: React.MouseEvent<HTMLElement>) => {
     e.stopPropagation();
-    onInfoClick(node.id, node.data);
+    onContextMenuButton(e, node.data);
+  };
+
+  const handleContextMenu = (e: React.MouseEvent<HTMLElement>) => {
+    // Only show context menu for non-ROOT nodes
+    if (node.data.type !== 'ROOT') {
+      onContextMenuRightClick(e, node.data);
+    }
   };
 
   const isProvider = node.data.type === 'ROOT';
 
   return (
     <div style={style} ref={dragHandle}>
-      <div onClick={handleNodeClick}>
+      <div
+        className="cdm-tree-node-row"
+        onClick={handleNodeClick}
+        onContextMenu={handleContextMenu}
+      >
         <Stack
           direction="row"
           spacing={0}
@@ -180,13 +210,28 @@ export const TreeNodeRenderer: FC<ITreeNodeRendererProps> = ({
           >
             {node.data.name}
           </Typography>
-          {/* Info button - only show if node has an info renderer */}
-          {node.data.infoRenderer && (
-            <IconButton size="small" onClick={handleInfoClick}>
-              <FontAwesomeIcon size="xs" icon={faCircleInfo} />
-            </IconButton>
-          )}
         </Stack>
+        {/* Context menu button - only for non-ROOT nodes */}
+        {!isProvider && (
+          <IconButton
+            size="small"
+            onClick={handleMenuButtonClick}
+            aria-label="More options"
+            className={`cdm-tree-menu-button${activeNodeId === node.id ? ' cdm-tree-menu-button-active' : ''}`}
+            sx={{
+              position: 'absolute',
+              right: 0,
+              top: '50%',
+              transform: 'translateY(-50%)',
+              backgroundColor: 'background.paper',
+              '&:hover': {
+                backgroundColor: 'action.hover'
+              }
+            }}
+          >
+            <FontAwesomeIcon size="xs" icon={faEllipsisVertical} />
+          </IconButton>
+        )}
       </div>
     </div>
   );

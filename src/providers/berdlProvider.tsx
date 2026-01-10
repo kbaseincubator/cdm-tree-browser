@@ -7,7 +7,8 @@ import {
   faDatabase,
   faTable,
   faUserCircle,
-  faUsers
+  faUsers,
+  faCode
 } from '@fortawesome/free-solid-svg-icons';
 import {
   BaseTreeNodeType,
@@ -18,6 +19,7 @@ import {
   parseKernelOutputJSON,
   queryKernel
 } from '../components/kernelCommunication';
+import { insertCodeCell } from '../utils/notebookUtils';
 
 /** Schema structure returned by get_table_schema function - simple array of column names */
 type TableSchema = string[];
@@ -151,6 +153,32 @@ export const berdlProvider: ITreeDataProvider<BerdlNodeType> = {
     table: (node, sessionContext) => (
       <TableSchemaDisplay node={node} sessionContext={sessionContext} />
     )
+  },
+  contextMenuItems: {
+    database: [
+      {
+        label: 'Insert snippet',
+        icon: <FontAwesomeIcon icon={faCode} />,
+        action: (node, _sessionContext, services) => {
+          const code = `# List tables in database "${node.name}"
+spark.catalog.listTables("${node.name}")`;
+          insertCodeCell(services.notebookTracker, code);
+        }
+      }
+    ],
+    table: [
+      {
+        label: 'Insert snippet',
+        icon: <FontAwesomeIcon icon={faCode} />,
+        action: (node, _sessionContext, services) => {
+          const database = node.data?.database || '';
+          const code = `# Load table "${node.name}" from database "${database}"
+df = spark.table("${database}.${node.name}")
+df`;
+          insertCodeCell(services.notebookTracker, code);
+        }
+      }
+    ]
   },
   fetchRootNodes: async (sessionContext: SessionContext) => {
     const { data, error } = await queryKernel(
