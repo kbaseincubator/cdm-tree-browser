@@ -10,8 +10,29 @@ import { FontAwesomeIcon } from '@fortawesome/react-fontawesome';
 import { faCopy, faCircleInfo } from '@fortawesome/free-solid-svg-icons';
 import { SessionContext } from '@jupyterlab/apputils';
 import { TreeNodeType } from './sharedTypes';
-import { IContextMenu } from './hooks/useContextMenu';
 import { IInfoPanel } from './InfoPanel';
+
+/** Context menu state and controls */
+export interface IContextMenu {
+  /** The node the context menu is for */
+  node: TreeNodeType | null;
+  /** Position for the menu */
+  anchorPosition: { top: number; left: number } | null;
+  /** Whether the menu is open */
+  isOpen: boolean;
+  /** Open menu from a button click (anchored below button) */
+  openFromButton: (
+    event: React.MouseEvent<HTMLElement>,
+    node: TreeNodeType
+  ) => void;
+  /** Open menu from right-click (anchored at cursor) */
+  openFromRightClick: (
+    event: React.MouseEvent<HTMLElement>,
+    node: TreeNodeType
+  ) => void;
+  /** Close the menu */
+  close: () => void;
+}
 
 /**
  * Context menu item definition for provider-defined menu items

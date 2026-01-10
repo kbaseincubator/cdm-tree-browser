@@ -1,27 +1,6 @@
 import { useState, useCallback, useMemo } from 'react';
 import { TreeNodeType } from '../sharedTypes';
-
-/** Context menu handle returned by useContextMenu */
-export interface IContextMenu {
-  /** The node the context menu is for */
-  node: TreeNodeType | null;
-  /** Position for the menu */
-  anchorPosition: { top: number; left: number } | null;
-  /** Whether the menu is open */
-  isOpen: boolean;
-  /** Open menu from a button click (anchored below button) */
-  openFromButton: (
-    event: React.MouseEvent<HTMLElement>,
-    node: TreeNodeType
-  ) => void;
-  /** Open menu from right-click (anchored at cursor) */
-  openFromRightClick: (
-    event: React.MouseEvent<HTMLElement>,
-    node: TreeNodeType
-  ) => void;
-  /** Close the menu */
-  close: () => void;
-}
+import { IContextMenu } from '../ContextMenu';
 
 /** Manages context menu state for tree nodes */
 export function useContextMenu(): IContextMenu {
