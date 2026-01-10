@@ -182,13 +182,13 @@ export const TreeBrowser: FC<ITreeBrowserProps> = ({
 
       {/* Fixed bottom panel for node info */}
       <InfoPanel
-        infoPanel={infoPanel}
+        state={infoPanel}
         sessionContext={sessionContext || null}
       />
 
       {/* Context menu for tree nodes */}
       <ContextMenu
-        menu={contextMenu}
+        state={contextMenu}
         infoPanel={infoPanel}
         sessionContext={sessionContext || null}
       />

@@ -3,15 +3,29 @@ import { SessionContext } from '@jupyterlab/apputils';
 import { Collapse, Paper, Typography, IconButton, Stack } from '@mui/material';
 import { FontAwesomeIcon } from '@fortawesome/react-fontawesome';
 import { faXmark } from '@fortawesome/free-solid-svg-icons';
-import { IInfoPanel } from './hooks/useInfoPanel';
+import { TreeNodeType } from './sharedTypes';
+
+/** Info panel state and controls */
+export interface IInfoPanel {
+  /** Currently displayed node, or null if closed */
+  node: TreeNodeType | null;
+  /** Whether the panel is open */
+  isOpen: boolean;
+  /** Open the panel for a node */
+  open: (node: TreeNodeType) => void;
+  /** Close the panel */
+  close: () => void;
+  /** Toggle the panel for a node (close if same node, open otherwise) */
+  toggle: (node: TreeNodeType) => void;
+}
 
 interface IInfoPanelProps {
-  infoPanel: IInfoPanel;
+  state: IInfoPanel;
   sessionContext: SessionContext | null;
 }
 
-export const InfoPanel: FC<IInfoPanelProps> = ({ infoPanel, sessionContext }) => {
-  const { node, isOpen, close } = infoPanel;
+export const InfoPanel: FC<IInfoPanelProps> = ({ state, sessionContext }) => {
+  const { node, isOpen, close } = state;
 
   return (
     <Collapse in={isOpen}>

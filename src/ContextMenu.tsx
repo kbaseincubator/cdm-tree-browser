@@ -11,7 +11,7 @@ import { faCopy, faCircleInfo } from '@fortawesome/free-solid-svg-icons';
 import { SessionContext } from '@jupyterlab/apputils';
 import { TreeNodeType } from './sharedTypes';
 import { IContextMenu } from './hooks/useContextMenu';
-import { IInfoPanel } from './hooks/useInfoPanel';
+import { IInfoPanel } from './InfoPanel';
 
 /**
  * Context menu item definition for provider-defined menu items
@@ -29,17 +29,17 @@ export interface IContextMenuItem<T extends string = string> {
 }
 
 interface IContextMenuProps {
-  menu: IContextMenu;
+  state: IContextMenu;
   infoPanel: IInfoPanel;
   sessionContext: SessionContext | null;
 }
 
 export const ContextMenu: FC<IContextMenuProps> = ({
-  menu,
+  state,
   infoPanel,
   sessionContext
 }) => {
-  const { node, anchorPosition, isOpen, close } = menu;
+  const { node, anchorPosition, isOpen, close } = state;
 
   if (!node || !anchorPosition) {
     return null;
