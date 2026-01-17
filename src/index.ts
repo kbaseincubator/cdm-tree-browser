@@ -13,7 +13,7 @@ import { QueryClient, QueryClientProvider } from '@tanstack/react-query';
 import { TreeBrowser } from './components/TreeBrowser';
 import treeIconSvg from '@fortawesome/fontawesome-free/svgs/solid/sitemap.svg';
 
-const EXTENSION_ID = 'cdm-tree-browser';
+const EXTENSION_ID = 'tenant-data-browser';
 const PLUGIN_ID = `${EXTENSION_ID}:plugin`;
 const TREE_ICON_ID = `${EXTENSION_ID}:tree-icon`;
 const PANEL_ID = `${EXTENSION_ID}-panel`;
