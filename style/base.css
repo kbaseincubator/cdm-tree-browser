@@ -3,3 +3,59 @@
 
     https://jupyterlab.readthedocs.io/en/stable/developer/css.html
 */
+
+/* Tree node row needs relative positioning for absolute button container */
+.cdm-tree-node-row {
+  position: relative;
+  width: 100%;
+  border-radius: 4px;
+  cursor: pointer;
+  transition: background-color 0.15s ease-in-out;
+}
+
+/* Focus styles for keyboard navigation */
+.cdm-tree-menu-buttons button:focus-visible {
+  outline: 2px solid var(--jp-brand-color1, #1976d2);
+  outline-offset: 2px;
+}
+
+/* Container for menu buttons (showAsButton items + ellipsis) */
+.cdm-tree-menu-buttons {
+  position: absolute;
+  right: 0;
+  top: 50%;
+  transform: translateY(-50%);
+  display: flex;
+  gap: 2px;
+  opacity: 0;
+  transition: opacity 0.15s ease-in-out;
+  background-color: var(--jp-layout-color2, rgb(0 0 0 / 4%));
+  border-radius: 4px;
+}
+
+/* Highlight row and show buttons when context menu is open */
+.cdm-tree-node-row-menu-open {
+  background-color: var(--jp-layout-color2, rgb(0 0 0 / 4%));
+}
+
+.cdm-tree-node-row-menu-open .cdm-tree-menu-buttons {
+  opacity: 1;
+}
+
+/* Show when active (last clicked node) - only on touch devices without hover */
+@media (hover: none) {
+  .cdm-tree-menu-buttons-active {
+    opacity: 1;
+  }
+}
+
+/* Show on hover - only on hover-capable devices */
+@media (hover: hover) {
+  .cdm-tree-node-row:hover {
+    background-color: var(--jp-layout-color2, rgb(0 0 0 / 4%));
+  }
+
+  .cdm-tree-node-row:hover .cdm-tree-menu-buttons {
+    opacity: 1;
+  }
+}

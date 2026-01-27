@@ -1,26 +1,22 @@
-import React, { FC, useState } from 'react';
+import React from 'react';
 import { SessionContext } from '@jupyterlab/apputils';
-import { useQuery } from '@tanstack/react-query';
-import { Typography, Button } from '@mui/material';
 import { FontAwesomeIcon } from '@fortawesome/react-fontawesome';
 import {
   faDatabase,
   faTable,
   faUserCircle,
-  faUsers
+  faUsers,
+  faArrowUpRightFromSquare,
+  faCode,
+  faCopy
 } from '@fortawesome/free-solid-svg-icons';
-import {
-  BaseTreeNodeType,
-  TreeNodeType,
-  ITreeDataProvider
-} from '../sharedTypes';
+import { BaseTreeNodeType, ITreeDataProvider } from '../sharedTypes';
+import { CMD_OPEN_TAB, TenantTabTarget } from '../tenantTab';
 import {
   parseKernelOutputJSON,
   queryKernel
 } from '../components/kernelCommunication';
-
-/** Schema structure returned by get_table_schema function - simple array of column names */
-type TableSchema = string[];
+import { insertCodeCell } from '../utils/notebookUtils';
 
 /** Response from get_my_groups function */
 interface IGroupsResponse {
@@ -44,97 +40,6 @@ type BerdlNodeType = 'userData' | 'tenant' | 'database' | 'table';
 const BERDL_METHODS_IMPORT =
   'import cdm_tree_browser; (get_table_schema, get_databases, get_tables, get_my_groups, get_namespace_prefix, using_mocks) = cdm_tree_browser.get_cdm_methods();';
 
-/** Displays table schema by calling get_table_schema mock function */
-const TableSchemaDisplay: FC<{
-  node: TreeNodeType<BerdlNodeType>;
-  sessionContext: SessionContext | null;
-}> = ({ node, sessionContext }) => {
-  const [showAllColumns, setShowAllColumns] = useState(false);
-  const {
-    data: schema,
-    isLoading,
-    error
-  } = useQuery({
-    queryKey: ['tableSchema', node.data?.database, node.name],
-    queryFn: async () => {
-      if (!sessionContext) {
-        throw new Error('No session context');
-      }
-
-      // Setup mock functions then call get_table_schema with node's database and name
-      const { data, error } = await queryKernel(
-        `${BERDL_METHODS_IMPORT} result = get_table_schema("${node.data?.database}", "${node.name}", return_json=True); result`,
-        sessionContext
-      );
-
-      if (error) {
-        throw error;
-      }
-
-      const schema = parseKernelOutputJSON<TableSchema>(data);
-      if (!schema) {
-        throw new Error('No schema data returned');
-      }
-
-      return schema;
-    },
-    enabled: !!sessionContext && !!node.data?.database
-  });
-
-  if (isLoading) {
-    return <Typography>Loading schema...</Typography>;
-  }
-  if (error) {
-    return (
-      <Typography color="error">
-        Error loading schema:{' '}
-        {error instanceof Error ? error.message : 'Unknown error'}
-      </Typography>
-    );
-  }
-  if (!schema) {
-    return <Typography>{node.name}</Typography>;
-  }
-
-  return (
-    <>
-      <Typography variant="body2" color="text.secondary" gutterBottom>
-        Database: {node.data?.database}
-      </Typography>
-      <Typography variant="body2" gutterBottom>
-        Columns ({schema.length || 0}):
-      </Typography>
-      {schema
-        ?.slice(0, showAllColumns ? undefined : 5)
-        .map((columnName: string, idx: number) => (
-          <Typography key={idx} variant="body2" component="div" sx={{ ml: 2 }}>
-            • {columnName}
-          </Typography>
-        ))}
-      {schema.length > 5 && !showAllColumns && (
-        <Button
-          variant="text"
-          size="small"
-          onClick={() => setShowAllColumns(true)}
-          sx={{ ml: 2, p: 0, minWidth: 'auto', textTransform: 'none' }}
-        >
-          ... and {schema.length - 5} more columns
-        </Button>
-      )}
-      {showAllColumns && schema.length > 5 && (
-        <Button
-          variant="text"
-          size="small"
-          onClick={() => setShowAllColumns(false)}
-          sx={{ ml: 2, p: 0, minWidth: 'auto', textTransform: 'none' }}
-        >
-          Show less
-        </Button>
-      )}
-    </>
-  );
-};
-
 // BERDL Database Provider - fetches tenant, database and table structure
 export const berdlProvider: ITreeDataProvider<BerdlNodeType> = {
   name: 'Lakehouse Data',
@@ -147,10 +52,101 @@ export const berdlProvider: ITreeDataProvider<BerdlNodeType> = {
     database: <FontAwesomeIcon icon={faDatabase} />,
     table: <FontAwesomeIcon icon={faTable} />
   },
-  nodeTypeInfoRenderers: {
-    table: (node, sessionContext) => (
-      <TableSchemaDisplay node={node} sessionContext={sessionContext} />
-    )
+  menuItems: {
+    userData: [
+      {
+        label: 'Open in tab',
+        icon: <FontAwesomeIcon size="sm" icon={faArrowUpRightFromSquare} />,
+        showAsButton: true,
+        action: (_node, _ctx, services) => {
+          const target: TenantTabTarget = { type: 'tenant', tenant: undefined };
+          services.app.commands.execute(CMD_OPEN_TAB, target);
+        }
+      },
+      {
+        label: 'Copy name',
+        icon: <FontAwesomeIcon size="sm" icon={faCopy} />,
+        action: node => navigator.clipboard.writeText(node.name)
+      }
+    ],
+    tenant: [
+      {
+        label: 'Open in tab',
+        icon: <FontAwesomeIcon size="sm" icon={faArrowUpRightFromSquare} />,
+        showAsButton: true,
+        action: (node, _ctx, services) => {
+          const target: TenantTabTarget = { type: 'tenant', tenant: node.name };
+          services.app.commands.execute(CMD_OPEN_TAB, target);
+        }
+      },
+      {
+        label: 'Copy name',
+        icon: <FontAwesomeIcon size="sm" icon={faCopy} />,
+        action: node => navigator.clipboard.writeText(node.name)
+      }
+    ],
+    database: [
+      {
+        label: 'Open in tab',
+        icon: <FontAwesomeIcon size="sm" icon={faArrowUpRightFromSquare} />,
+        showAsButton: true,
+        action: (node, _ctx, services) => {
+          const target: TenantTabTarget = {
+            type: 'database',
+            databaseName: node.name,
+            tenant: node.data?.tenant
+          };
+          services.app.commands.execute(CMD_OPEN_TAB, target);
+        }
+      },
+      {
+        label: 'Copy name',
+        icon: <FontAwesomeIcon size="sm" icon={faCopy} />,
+        action: node => navigator.clipboard.writeText(node.name)
+      },
+      {
+        label: 'Insert snippet',
+        icon: <FontAwesomeIcon size="sm" icon={faCode} />,
+        action: (node, _ctx, services) => {
+          insertCodeCell(
+            services.notebookTracker,
+            `spark.sql(f"SHOW TABLES IN ${node.name}").show()`
+          );
+        }
+      }
+    ],
+    table: [
+      {
+        label: 'Open in tab',
+        icon: <FontAwesomeIcon size="sm" icon={faArrowUpRightFromSquare} />,
+        showAsButton: true,
+        action: (node, _ctx, services) => {
+          const target: TenantTabTarget = {
+            type: 'table',
+            tableName: node.name,
+            databaseName: node.data?.database,
+            tenant: node.data?.tenant
+          };
+          services.app.commands.execute(CMD_OPEN_TAB, target);
+        }
+      },
+      {
+        label: 'Copy name',
+        icon: <FontAwesomeIcon size="sm" icon={faCopy} />,
+        action: node => navigator.clipboard.writeText(node.name)
+      },
+      {
+        label: 'Insert snippet',
+        icon: <FontAwesomeIcon size="sm" icon={faCode} />,
+        action: (node, _ctx, services) => {
+          const db = node.data?.database || '';
+          insertCodeCell(
+            services.notebookTracker,
+            `spark.sql(f"SELECT * FROM ${db}.${node.name} LIMIT 5").show()`
+          );
+        }
+      }
+    ]
   },
   fetchRootNodes: async (sessionContext: SessionContext) => {
     const { data, error } = await queryKernel(
