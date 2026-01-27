@@ -107,10 +107,10 @@ export const berdlProvider: ITreeDataProvider<BerdlNodeType> = {
       {
         label: 'Insert snippet',
         icon: <FontAwesomeIcon size="sm" icon={faCode} />,
-        action: (_node, _ctx, services) => {
+        action: (node, _ctx, services) => {
           insertCodeCell(
             services.notebookTracker,
-            `spark.catalog.listTables("${_node.name}")`
+            `spark.sql(f"SHOW TABLES IN ${node.name}").show()`
           );
         }
       }
@@ -142,7 +142,7 @@ export const berdlProvider: ITreeDataProvider<BerdlNodeType> = {
           const db = node.data?.database || '';
           insertCodeCell(
             services.notebookTracker,
-            `df = spark.table("${db}.${node.name}")`
+            `spark.sql(f"SELECT * FROM ${db}.${node.name} LIMIT 5").show()`
           );
         }
       }

@@ -13,6 +13,12 @@
   transition: background-color 0.15s ease-in-out;
 }
 
+/* Focus styles for keyboard navigation */
+.cdm-tree-menu-buttons button:focus-visible {
+  outline: 2px solid var(--jp-brand-color1, #1976d2);
+  outline-offset: 2px;
+}
+
 /* Container for menu buttons (showAsButton items + ellipsis) */
 .cdm-tree-menu-buttons {
   position: absolute;

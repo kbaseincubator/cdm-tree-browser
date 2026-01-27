@@ -259,7 +259,9 @@ export const TreeNodeRenderer: FC<ITreeNodeRendererProps> = ({
             <IconButton
               size="small"
               onClick={handleMenuButtonClick}
-              aria-label="More options"
+              aria-label={`More options for ${node.data.name}`}
+              aria-haspopup="menu"
+              aria-expanded={hasContextMenuOpen}
               sx={actionButtonSx}
             >
               <FontAwesomeIcon size="xs" icon={faEllipsisVertical} />
@@ -269,7 +271,7 @@ export const TreeNodeRenderer: FC<ITreeNodeRendererProps> = ({
                 key={idx}
                 size="small"
                 onClick={e => handleMenuItemButtonClick(e, item)}
-                aria-label={item.label}
+                aria-label={`${item.label} ${node.data.name}`}
                 sx={{ ...actionButtonSx, padding: '4px', fontSize: '0.85rem' }}
               >
                 {item.icon}
