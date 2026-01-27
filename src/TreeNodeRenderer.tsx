@@ -1,25 +1,60 @@
-import React, { FC, useEffect } from 'react';
+import React, { FC, useEffect, useCallback } from 'react';
 import { SessionContext } from '@jupyterlab/apputils';
 import { useQuery } from '@tanstack/react-query';
 import { NodeRendererProps } from 'react-arborist';
-import { IconButton, Stack, Typography } from '@mui/material';
+import { Box, IconButton, Stack, Typography } from '@mui/material';
 import { FontAwesomeIcon } from '@fortawesome/react-fontawesome';
 import {
   faFile,
   faFolder,
   faFolderOpen,
-  faCircleInfo,
-  faSpinner
+  faSpinner,
+  faEllipsisVertical
 } from '@fortawesome/free-solid-svg-icons';
-import { TreeNodeType, TreeNodeMutator } from './sharedTypes';
+import {
+  TreeNodeType,
+  TreeNodeMutator,
+  IMenuItem,
+  IMenuServices
+} from './sharedTypes';
 import { treeQueryManager } from './treeQueryManager';
 import { showErrorWithRetry } from './utils/errorUtil';
+
+/** Shared styling for action buttons */
+const actionButtonSx = {
+  backgroundColor: 'grey.200',
+  '&:hover': { backgroundColor: 'background.paper' },
+  '&:active': { backgroundColor: 'grey.300' }
+};
 
 /** Props for the TreeNodeRenderer component */
 interface ITreeNodeRendererProps extends NodeRendererProps<TreeNodeType> {
   sessionContext: SessionContext;
   onNodeUpdate: TreeNodeMutator;
-  onInfoClick: (nodeId: string, node: TreeNodeType) => void;
+  /** Callback to open context menu from button click */
+  onContextMenuButton: (
+    event: React.MouseEvent<HTMLElement>,
+    node: TreeNodeType
+  ) => void;
+  /** Callback to open context menu from right-click */
+  onContextMenuRightClick: (
+    event: React.MouseEvent<HTMLElement>,
+    node: TreeNodeType
+  ) => void;
+  /** Callback for menu item button clicks (showAsButton items) */
+  onMenuItemClick: (
+    event: React.MouseEvent<HTMLElement>,
+    node: TreeNodeType,
+    menuItem: IMenuItem
+  ) => void;
+  /** Services available for menu item actions */
+  services: IMenuServices;
+  /** Currently active node ID (for touch devices) */
+  activeNodeId: string | null;
+  /** Node ID that has context menu open */
+  contextMenuNodeId: string | null;
+  /** Callback when node becomes active */
+  onNodeActive: (nodeId: string) => void;
   /** Callback triggered when node open state changes */
   onToggle?: () => void;
   /** Array of node IDs that should be restored to open state */
@@ -29,14 +64,8 @@ interface ITreeNodeRendererProps extends NodeRendererProps<TreeNodeType> {
 }
 
 /** Function to get the appropriate icon for a node */
-const getNodeIcon = (node: TreeNodeType, isOpen?: boolean): React.ReactNode => {
-  // Use custom icon if provided
-  if (node.icon) {
-    return node.icon;
-  }
-
-  // Default to file icon for nodes without custom icons
-  return <FontAwesomeIcon icon={faFile} />;
+const getNodeIcon = (node: TreeNodeType): React.ReactNode => {
+  return node.icon || <FontAwesomeIcon icon={faFile} />;
 };
 
 /**
@@ -53,7 +82,13 @@ export const TreeNodeRenderer: FC<ITreeNodeRendererProps> = ({
   tree,
   sessionContext,
   onNodeUpdate,
-  onInfoClick,
+  onContextMenuButton,
+  onContextMenuRightClick,
+  onMenuItemClick,
+  services,
+  activeNodeId,
+  contextMenuNodeId,
+  onNodeActive,
   onToggle,
   restoreOpenNodeIds,
   treeData
@@ -115,7 +150,10 @@ export const TreeNodeRenderer: FC<ITreeNodeRendererProps> = ({
     }
   }, [node.id, node.isOpen, node.isLeaf, restoreOpenNodeIds, tree, onToggle]);
 
-  const handleNodeClick = () => {
+  const handleNodeClick = useCallback(() => {
+    // Make this node active (for touch devices)
+    onNodeActive(node.id);
+
     if (!node.isLeaf) {
       tree.get(node.id)?.toggle();
       // Notify parent of state change after DOM update
@@ -123,23 +161,50 @@ export const TreeNodeRenderer: FC<ITreeNodeRendererProps> = ({
         setTimeout(onToggle, 0);
       }
     }
-  };
+  }, [node.id, node.isLeaf, tree, onNodeActive, onToggle]);
 
-  const handleInfoClick = (e: React.MouseEvent) => {
-    e.stopPropagation();
-    onInfoClick(node.id, node.data);
-  };
+  const handleContextMenu = useCallback(
+    (e: React.MouseEvent<HTMLElement>) => {
+      onContextMenuRightClick(e, node.data);
+    },
+    [node.data, onContextMenuRightClick]
+  );
+
+  const handleMenuButtonClick = useCallback(
+    (e: React.MouseEvent<HTMLElement>) => {
+      e.stopPropagation();
+      onContextMenuButton(e, node.data);
+    },
+    [node.data, onContextMenuButton]
+  );
+
+  const handleMenuItemButtonClick = useCallback(
+    (e: React.MouseEvent<HTMLElement>, menuItem: IMenuItem) => {
+      e.stopPropagation();
+      onMenuItemClick(e, node.data, menuItem);
+    },
+    [node.data, onMenuItemClick]
+  );
 
   const isProvider = node.data.type === 'ROOT';
+  const isActive = activeNodeId === node.id;
+  const hasContextMenuOpen = contextMenuNodeId === node.id;
+  const buttonItems =
+    node.data.menuItems?.filter(item => item.showAsButton) || [];
 
   return (
-    <div style={style} ref={dragHandle}>
-      <div onClick={handleNodeClick}>
+    <div style={style} ref={dragHandle} onContextMenu={handleContextMenu}>
+      <Box
+        className={`cdm-tree-node-row${hasContextMenuOpen ? ' cdm-tree-node-row-menu-open' : ''}`}
+        onClick={handleNodeClick}
+        sx={{ display: 'flex', alignItems: 'center', width: '100%' }}
+      >
         <Stack
           direction="row"
           spacing={0}
           alignItems="center"
           justifyItems="start"
+          sx={{ flex: 1, minWidth: 0 }}
         >
           {/* Provider icon (larger, no folder) */}
           {isProvider && (
@@ -169,25 +234,50 @@ export const TreeNodeRenderer: FC<ITreeNodeRendererProps> = ({
           )}
           {/* Node type icon for leaf nodes */}
           {!node.data.isParentNode && !isProvider && (
-            <IconButton size="small">
-              {getNodeIcon(node.data, node.isOpen)}
-            </IconButton>
+            <IconButton size="small">{getNodeIcon(node.data)}</IconButton>
           )}
           <Typography
             variant="body2"
-            sx={{ fontWeight: isProvider ? 'bold' : 'normal' }}
+            sx={{
+              fontWeight: isProvider ? 'bold' : 'normal',
+              overflow: 'hidden',
+              textOverflow: 'ellipsis',
+              whiteSpace: 'nowrap'
+            }}
             height="1.2em"
           >
             {node.data.name}
           </Typography>
-          {/* Info button - only show if node has an info renderer */}
-          {node.data.infoRenderer && (
-            <IconButton size="small" onClick={handleInfoClick}>
-              <FontAwesomeIcon size="xs" icon={faCircleInfo} />
-            </IconButton>
-          )}
         </Stack>
-      </div>
+
+        {/* Menu button area - right side of node row */}
+        {!isProvider && (
+          <Box
+            className={`cdm-tree-menu-buttons${isActive ? ' cdm-tree-menu-buttons-active' : ''}`}
+            sx={{ paddingRight: '3px' }}
+          >
+            <IconButton
+              size="small"
+              onClick={handleMenuButtonClick}
+              aria-label="More options"
+              sx={actionButtonSx}
+            >
+              <FontAwesomeIcon size="xs" icon={faEllipsisVertical} />
+            </IconButton>
+            {buttonItems.map((item, idx) => (
+              <IconButton
+                key={idx}
+                size="small"
+                onClick={e => handleMenuItemButtonClick(e, item)}
+                aria-label={item.label}
+                sx={{ ...actionButtonSx, padding: '4px', fontSize: '0.85rem' }}
+              >
+                {item.icon}
+              </IconButton>
+            ))}
+          </Box>
+        )}
+      </Box>
     </div>
   );
 };

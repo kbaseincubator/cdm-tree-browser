@@ -19,7 +19,7 @@ import dataProviders from './providers';
 function createTreeQueryManager(dataProviders: ITreeDataProvider[]) {
   const providerNames = dataProviders.map(provider => provider.name);
 
-  // Function to apply provider properties (icons, parent node status, and info renderers) to nodes
+  // Function to apply provider properties (icons, parent node status, menu items) to nodes
   const applyProviderProperties = (
     nodes: BaseTreeNodeType[],
     provider: ITreeDataProvider
@@ -31,7 +31,7 @@ function createTreeQueryManager(dataProviders: ITreeDataProvider[]) {
         provider.nodeTypeIcons?.[node.type] ||
         React.createElement('span'), // Ensure icon is always present
       isParentNode: provider.parentNodeTypes.includes(node.type),
-      infoRenderer: provider.nodeTypeInfoRenderers?.[node.type],
+      menuItems: provider.menuItems?.[node.type],
       children: node.children
         ? applyProviderProperties(node.children, provider)
         : undefined
