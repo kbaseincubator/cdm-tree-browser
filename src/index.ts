@@ -102,23 +102,23 @@ const plugin: JupyterFrontEndPlugin<void> = {
         )
       );
 
-      const infoWidget = new MainAreaWidget({ content });
+      const tenantTab = new MainAreaWidget({ content });
       const tabLabel = target.tenant || 'User Data';
 
-      infoWidget.id = `${EXTENSION_ID}-tenant-${tenantKey}`;
-      infoWidget.title.label = tabLabel;
-      infoWidget.title.icon = tenantIcon;
-      infoWidget.title.closable = true;
+      tenantTab.id = `${EXTENSION_ID}-tenant-${tenantKey}`;
+      tenantTab.title.label = tabLabel;
+      tenantTab.title.icon = tenantIcon;
+      tenantTab.title.closable = true;
 
       // Track this tab and clean up when disposed
-      openTenantTabs.set(tenantKey, infoWidget);
-      infoWidget.disposed.connect(() => {
+      openTenantTabs.set(tenantKey, tenantTab);
+      tenantTab.disposed.connect(() => {
         openTenantTabs.delete(tenantKey);
         tenantUpdateCallbacks.delete(tenantKey);
       });
 
-      app.shell.add(infoWidget, 'main');
-      app.shell.activateById(infoWidget.id);
+      app.shell.add(tenantTab, 'main');
+      app.shell.activateById(tenantTab.id);
     };
 
     // Register command for opening tenant tabs
