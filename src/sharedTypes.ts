@@ -1,5 +1,34 @@
 import React from 'react';
 import { SessionContext } from '@jupyterlab/apputils';
+import { JupyterFrontEnd } from '@jupyterlab/application';
+import { INotebookTracker } from '@jupyterlab/notebook';
+
+/**
+ * JupyterLab services available to menu item actions
+ */
+export interface IMenuServices {
+  app: JupyterFrontEnd;
+  notebookTracker: INotebookTracker;
+}
+
+/**
+ * Menu item definition for provider-defined menu items
+ * @template T - Union type of supported node types
+ */
+export interface IMenuItem<T extends string = string> {
+  /** Display label for the menu item */
+  label: string;
+  /** Optional icon to display next to the label */
+  icon?: React.ReactNode;
+  /** If true, render as icon button next to the ellipsis menu */
+  showAsButton?: boolean;
+  /** Action to perform when menu item is clicked */
+  action: (
+    node: TreeNodeType<T>,
+    sessionContext: SessionContext | null,
+    services: IMenuServices
+  ) => void;
+}
 
 /**
  * Base tree node type without provider-applied properties
@@ -34,11 +63,8 @@ export type TreeNodeType<T extends string = string, D = any> = BaseTreeNodeType<
   icon: React.ReactNode;
   /** Whether this is a parent node - applied automatically based on provider configuration */
   isParentNode: boolean;
-  /** Info renderer function - applied from provider configuration */
-  infoRenderer?: (
-    node: TreeNodeType<T, D>,
-    sessionContext: SessionContext | null
-  ) => React.ReactNode;
+  /** Menu items for context menu and action buttons */
+  menuItems?: IMenuItem<T>[];
   /** Child nodes with provider properties applied */
   children?: TreeNodeType<T, D>[];
 };
@@ -72,12 +98,9 @@ export interface ITreeDataProvider<T extends string = string> {
   nodeTypeIcons?: {
     [K in T]?: React.ReactNode;
   };
-  /** Custom info panel renderers by node type - receives sessionContext for API calls */
-  nodeTypeInfoRenderers?: {
-    [K in T]?: (
-      node: TreeNodeType<T>,
-      sessionContext: SessionContext | null
-    ) => React.ReactNode;
+  /** Menu items configuration by node type */
+  menuItems?: {
+    [K in T]?: IMenuItem<T>[];
   };
 }
 

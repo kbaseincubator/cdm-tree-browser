@@ -8,16 +8,22 @@ import React, {
 } from 'react';
 import { JupyterFrontEnd, ILayoutRestorer } from '@jupyterlab/application';
 import { IStateDB } from '@jupyterlab/statedb';
+import { INotebookTracker } from '@jupyterlab/notebook';
 import { Tree, TreeApi } from 'react-arborist';
 import { useSessionContext } from './kernelCommunication';
-import { TreeNodeType, TreeNodeMutator } from '../sharedTypes';
+import {
+  TreeNodeType,
+  TreeNodeMutator,
+  IMenuItem,
+  IMenuServices
+} from '../sharedTypes';
 import { treeQueryManager, updateNodeInTree } from '../treeQueryManager';
 import { useTreeDimensions } from '../hooks/useTreeDimensions';
-import { useInfoPanel } from '../hooks/useInfoPanel';
+import { useContextMenu } from '../hooks/useContextMenu';
 import { useMockNotification } from '../hooks/useMockNotification';
 import { TreeDataLoader } from '../TreeDataLoader';
 import { TreeNodeRenderer } from '../TreeNodeRenderer';
-import { InfoPanel } from '../InfoPanel';
+import { ContextMenu } from '../ContextMenu';
 import { showError } from '../utils/errorUtil';
 import { debounce } from '../utils/debounce';
 
@@ -28,6 +34,7 @@ interface ITreeBrowserProps {
   jupyterApp: JupyterFrontEnd;
   restorer: ILayoutRestorer;
   stateDB: IStateDB;
+  notebookTracker: INotebookTracker;
 }
 
 /**
@@ -39,7 +46,8 @@ interface ITreeBrowserProps {
 export const TreeBrowser: FC<ITreeBrowserProps> = ({
   jupyterApp,
   restorer,
-  stateDB
+  stateDB,
+  notebookTracker
 }) => {
   const {
     sessionContext,
@@ -49,7 +57,16 @@ export const TreeBrowser: FC<ITreeBrowserProps> = ({
   const containerRef = useRef<HTMLDivElement>(null);
   const treeRef = useRef<TreeApi<TreeNodeType>>(null);
   const containerDimensions = useTreeDimensions(containerRef);
-  const { openNode, toggleInfo, closeInfo } = useInfoPanel();
+  const contextMenu = useContextMenu();
+
+  // Services for menu item actions
+  const services: IMenuServices = useMemo(
+    () => ({ app: jupyterApp, notebookTracker }),
+    [jupyterApp, notebookTracker]
+  );
+
+  // Track active node (for touch devices)
+  const [activeNodeId, setActiveNodeId] = useState<string | null>(null);
 
   // Check if mocks are active and show notification
   useMockNotification(sessionContext);
@@ -122,6 +139,24 @@ export const TreeBrowser: FC<ITreeBrowserProps> = ({
     []
   );
 
+  // Handler for showAsButton menu item clicks
+  const handleMenuItemClick = useCallback(
+    (
+      event: React.MouseEvent<HTMLElement>,
+      node: TreeNodeType,
+      item: IMenuItem
+    ) => {
+      event.stopPropagation();
+      item.action(node, sessionContext ?? null, services);
+    },
+    [sessionContext, services]
+  );
+
+  // Handler for node becoming active (touch devices)
+  const handleNodeActive = useCallback((nodeId: string) => {
+    setActiveNodeId(nodeId);
+  }, []);
+
   return (
     <div
       ref={containerRef}
@@ -162,7 +197,13 @@ export const TreeBrowser: FC<ITreeBrowserProps> = ({
               {...nodeProps}
               sessionContext={sessionContext}
               onNodeUpdate={handleNodeUpdate}
-              onInfoClick={toggleInfo}
+              onContextMenuButton={contextMenu.openFromButton}
+              onContextMenuRightClick={contextMenu.openFromRightClick}
+              onMenuItemClick={handleMenuItemClick}
+              services={services}
+              activeNodeId={activeNodeId}
+              contextMenuNodeId={contextMenu.node?.id ?? null}
+              onNodeActive={handleNodeActive}
               onToggle={handleTreeStateChange}
               restoreOpenNodeIds={hasUserInteracted ? [] : openNodeIds}
               treeData={treeData}
@@ -171,11 +212,11 @@ export const TreeBrowser: FC<ITreeBrowserProps> = ({
         </Tree>
       )}
 
-      {/* Fixed bottom panel for node info */}
-      <InfoPanel
-        openNode={openNode}
-        sessionContext={sessionContext || null}
-        onClose={closeInfo}
+      {/* Context menu */}
+      <ContextMenu
+        state={contextMenu}
+        sessionContext={sessionContext ?? null}
+        services={services}
       />
     </div>
   );
